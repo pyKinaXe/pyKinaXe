@@ -1,0 +1,32 @@
+name: pykinaxe
+channels:
+  - conda-forge
+  - bioconda
+dependencies:
+  # Python and GUI/runtime basics used by both the scientific pipeline and the
+  # optional local web backend.
+  - python=3.11
+  - pip
+  - tk
+  - flask>=3.0
+  - joblib>=1.3
+  - matplotlib>=3.8
+  - numba>=0.59
+  - numpy>=1.26
+  - openpyxl>=3.1
+  - pandas>=2.1
+  - pillow>=10.0
+  - pyyaml>=6.0
+  - requests>=2.31
+  - scipy>=1.11
+  - seaborn>=0.13
+  - statsmodels>=0.14
+  - xarray>=2023.0
+  # Install the prebuilt Bioconda package so users do not need a local C/C++
+  # toolchain during setup. Keep the constraint loose here because Bioconda can
+  # lag behind the newest PyPI release slightly.
+  - bioconda::inmoose>=0.9.0
+  - pip:
+      - gprofiler-official>=1.0
+      - gunicorn>=21.2
+      - opencv-python-headless>=4.9

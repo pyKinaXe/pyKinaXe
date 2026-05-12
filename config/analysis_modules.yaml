@@ -1,0 +1,59 @@
+peptide_analysis:
+  path_file_enrichment_peptides: data/external/PamGene/enrichment_peptides.csv
+  peptide_row_name: UniprotAccession
+  y_axis_peptides: p_value
+  allowed_log2_slope_modes:
+    - pamgene_zero
+    - epsilon_floor
+  default_log2_slope_mode: epsilon_floor
+
+pathway_enrichment_analysis:
+  default_significance_level_pathways: 0.05
+  default_uka_visualization_metric: kinase_change
+  uka_metric_options:
+    kinase_change:
+      column: KinaseChange
+      label: Kinase Change
+    kinase_statistic:
+      column: KinaseStatistic
+      label: Kinase Statistic
+
+upstream_kinase_analysis:
+  default_verified_evidence_levels:
+    - curated_literature
+    - curated_source
+    - literature_supported
+  default_blast_results_relative_path: external/BLAST/blast_results_uniprot.csv
+  uniprot_name_lookup_url: https://rest.uniprot.org/uniprotkb/search
+  path_file_enrichment_peptides: data/external/PamGene/enrichment_peptides.csv
+  input_stk_ptm_path: data/processed/PTM_Data_OmniPath/stk_interactions.csv
+  input_ptk_ptm_path: data/processed/PTM_Data_OmniPath/ptk_interactions.csv
+  candidate_data_paths:
+    - ./data
+    - ../data
+    - ../../data
+    - ~/data
+  minimum_n_permutations: 100
+  allowed_kpea_significance_methods:
+    - z_score
+    - p_value
+    - fdr
+  allowed_kpea_cutoff_modes:
+    - average
+    - primary
+  uka_metric_options:
+    kinase_change:
+      column: KinaseChange
+      label: Kinase Change
+    kinase_statistic:
+      column: KinaseStatistic
+      label: Kinase Statistic
+  default_uka_volcano_x_axis: kinase_change
+  default_kpea_lfc_cutoffs: [0.3, 0.4, 0.5]
+  default_kpea_cutoff_mode: average
+  default_kpea_substrate_cutoff: 1
+  default_kpea_zscore_threshold: 2.0
+  default_kpea_z_cap: 10.0
+  default_kpea_significance_method: z_score
+  default_kpea_empirical_p_threshold: 0.35
+  default_kpea_fdr_threshold: 0.10

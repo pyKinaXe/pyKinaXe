@@ -1,0 +1,80 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+ENV/
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Jupyter
+.ipynb_checkpoints
+*/.ipynb_checkpoints/*
+
+# Data files
+# Ignore everything under data/ by default, except the two subtrees that should
+# stay Git-trackable for sharing through GitHub.
+data/*
+!data/external/
+!data/external/**
+!data/processed/
+!data/processed/**
+
+# Models (don't commit large model files!)
+models/*.pkl
+models/*.h5
+models/*.pt
+models/*.pth
+models/checkpoints/*
+!models/.gitkeep
+!models/README.md
+
+# Results
+results/
+experiments/*/logs/
+experiments/*/model/
+*.png
+*.jpg
+*.pdf
+!docs/img/logo.png
+!docs/img/pic.png
+!results/.gitkeep
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+logs/
+
+# Web app runtime
+.pykinaxe_web_runtime/
+webapp/runtime/
+
+# Environment
+.env
+.env.local

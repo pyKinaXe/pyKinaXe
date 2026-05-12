@@ -1,0 +1,76 @@
+data_enricher:
+  columns:
+    pamchip_location: PamChip Location
+    barcode: Barcode
+    row: Row
+    array: Array
+    article_number: Article number
+    strip: Strip
+    sample_name: Sample name
+    technical_replicate: Technical replicate
+    biological_replicate: Biological replicate
+    assay_volume: Assay volume
+    test_condition: _test_condition
+  annotation_always_display:
+    - PamChip Location
+    - Barcode
+    - Row
+    - Sample name
+  annotation_conditional_display:
+    - Technical replicate
+    - Biological replicate
+  annotation_exclude_columns:
+    - Assay volume
+  roman_values:
+    I: 1
+    V: 5
+    X: 10
+    L: 50
+    C: 100
+    D: 500
+    M: 1000
+  enrichment_filename_suffix: _data_enrichment
+  test_condition:
+    control: Control
+    prefix: Test
+
+uniprot_blast_api_data_collector:
+  input_path: data/external/PamGene/enrichment_peptides.csv
+  output_path: data/external/BLAST/blast_results_uniprot.csv
+  email: your@email.com
+  base_url: https://www.ebi.ac.uk/Tools/services/rest/ncbiblast
+
+omnipath_ptm_extractor:
+  curated_source_labels:
+    - PhosphoSitePlus
+    - SIGNOR
+    - HPRD
+    - PhosphoELM
+  evidence_rank:
+    predicted_or_inferred: 0
+    literature_supported: 1
+    curated_source: 2
+    curated_literature: 3
+  omnipath_enzsub_url: https://omnipathdb.org/enz_sub
+  iptmnet_api_url: https://research.bioinformatics.udel.edu/iptmnet/api/v1
+  uniprot_kinase_url: https://rest.uniprot.org/uniprotkb/stream?format=tsv&query=%28%28taxonomy_id%3A9606%29%20AND%20%28reviewed%3Atrue%29%20AND%20%28%28keyword%3AKW-0723%29%20OR%20%28keyword%3AKW-0829%29%29%29&fields=accession,gene_primary
+  default_uniprot_stk_path: data/external/PTM/UniProt/STK_uniprotkb_taxonomy_id_9606_AND_keyword_2026_03_30.tsv
+  default_uniprot_ptk_path: data/external/PTM/UniProt/PTK_uniprotkb_taxonomy_id_9606_AND_keyword_2026_03_30.tsv
+  manual_interactions_filename: manual_interactions.csv
+  output_dir: data/processed/PTM_Data_OmniPath
+  organism: 9606
+  timeout: 120
+  iptmnet_batch_size: 1000
+
+kinase_liver_extractor:
+  output_path: data/external/UniProt/kinases_in_liver.csv
+  api_format: tsv
+  api_taxonomy_id: '9606'
+  api_keyword: KW-0418
+  api_fields: gene_primary,accession
+  url: https://rest.uniprot.org/uniprotkb/search
+  params:
+    query: (organism_id:9606) AND (keyword:KW-0418) AND (cc_tissue_specificity:liver)
+    format: tsv
+    fields: accession,gene_names,protein_name,cc_tissue_specificity
+    size: 500

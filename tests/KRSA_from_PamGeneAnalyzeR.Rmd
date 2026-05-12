@@ -1,0 +1,602 @@
+---
+title: "KRSA_from_PamGeneAnalyzeR"
+output: html_document
+---
+
+# KRSA analysis based on PamGeneAnalyzeR outputs
+
+## Load packages
+
+```{r}
+library(KRSA)
+library(dplyr)
+library(tidyr)
+library(purrr)
+library(readr)
+library(ggplot2)
+library(knitr)
+library(broom)
+library(EnvStats)
+
+analysis_started_at <- Sys.time()
+analysis_proc_start <- proc.time()
+```
+
+## Configuration
+
+```{r}
+repo_root <- NULL
+for (candidate in c(".", "..")) {
+  candidate_path <- normalizePath(candidate, winslash = "/", mustWork = FALSE)
+  if (file.exists(file.path(candidate_path, "tests", "outDir_PTK")) &&
+      file.exists(file.path(candidate_path, "tests", "outDir_STK"))) {
+    repo_root <- candidate_path
+    break
+  }
+}
+
+if (is.null(repo_root)) {
+  stop("Could not locate the repository root from the current working directory.")
+}
+
+repo_path <- function(...) {
+  file.path(repo_root, ...)
+}
+
+sample_annotation_path <- repo_path(
+  "results",
+  "20260402160155_Kerthi_HDV_Aug24",
+  "710483213_710483216-on 1300STKlysv10-run 240821110734",
+  "20260402160155_data_enrichment.csv"
+)
+
+out_dir_PTK <- repo_path("tests", "outDir_PTK")
+out_dir_STK <- repo_path("tests", "outDir_STK")
+krsa_output_dir <- repo_path("tests", "krsa_from_pamgene")
+
+group_col <- "Test.Condition"
+control_label <- "Control"
+
+# KRSA's bundled report template uses signal_threshold = 5 for BioNavigator
+# I_median crosstab files. The PamGeneAnalyzeR-derived values here are on
+# a much smaller scale, so we keep this threshold near zero by default.
+signal_scale_factor <- 1000
+signal_threshold <- 0
+r2_threshold <- 0.9
+nobs_filter <- 0
+lfc_thresholds <- c(0.05, 0.1, 0.2)
+primary_lfc_threshold <- 0.05
+
+krsa_seed <- 123
+krsa_iterations <- 2000
+```
+
+## Helper functions
+
+```{r}
+negative_control_names <- c(
+  "right_background1", "right_background2",
+  "left_background1", "left_background2",
+  "top_background1", "top_background2",
+  "bottom_background1", "bottom_background2"
+)
+
+assert_existing_txt_output <- function(path, label) {
+  txt_files <- list.files(path, pattern = "\\.txt$", full.names = TRUE)
+  if (!length(txt_files)) {
+    stop(sprintf(
+      "%s does not contain PamGeneAnalyzeR TXT outputs: %s",
+      label,
+      path
+    ))
+  }
+  txt_files
+}
+
+mixed_levels_base <- function(values) {
+  values_chr <- as.character(values)
+  unique_values <- unique(values_chr)
+  unique_numeric <- suppressWarnings(
+    as.numeric(sub("^.*?([0-9]+(?:\\.[0-9]+)?).*$", "\\1", unique_values))
+  )
+  unique_values[order(is.na(unique_numeric), unique_numeric, unique_values)]
+}
+
+resolve_spot_labels <- function(df) {
+  labels <- df$ID
+  use_names <- (is.na(labels) | labels == "#REF") & !is.na(df$names) & df$names != ""
+  labels[use_names] <- df$names[use_names]
+  labels
+}
+
+merge_experiments_compatible <- function(path, pattern = NULL, value = "median") {
+  batch <- sort(dir(path = path, pattern = pattern))
+  d <- NULL
+
+  for (filename in batch) {
+    pam <- pamgeneAnalyzeR::pamgeneObject(file = file.path(path, filename))
+    labels <- resolve_spot_labels(pam$data)
+    keep <- !is.na(labels) & labels != "#REF"
+    tmp <- pam$data[keep, value]
+    names(tmp) <- labels[keep]
+
+    d <- rbind(
+      d,
+      data.frame(
+        chipID = pam$chipID,
+        well = pam$well,
+        cycle = pam$cycle,
+        exposureTime = pam$exposureTime,
+        t(tmp),
+        check.names = FALSE
+      )
+    )
+  }
+
+  d$cycle <- factor(as.character(d$cycle), levels = mixed_levels_base(d$cycle))
+  d$exposureTime <- factor(as.character(d$exposureTime), levels = mixed_levels_base(d$exposureTime))
+  d
+}
+
+subtract_background_compatible <- function(rawData) {
+  pheno_cols <- intersect(c("chipID", "well", "exposureTime", "cycle", "ZpFactor"), names(rawData))
+  signal_cols <- setdiff(names(rawData), pheno_cols)
+
+  missing_neg_controls <- setdiff(negative_control_names, signal_cols)
+  if (length(missing_neg_controls)) {
+    stop(sprintf(
+      "Missing required background controls: %s",
+      paste(missing_neg_controls, collapse = ", ")
+    ))
+  }
+
+  negative_means <- rowMeans(rawData[negative_control_names], na.rm = FALSE)
+  normalized_signal <- as.data.frame(
+    sweep(as.matrix(rawData[signal_cols]), 1, negative_means, FUN = "-"),
+    check.names = FALSE
+  )
+
+  data.frame(rawData[pheno_cols], normalized_signal, check.names = FALSE)
+}
+
+wide_metric_to_long <- function(df, value_name) {
+  pheno_cols <- intersect(c("chipID", "well", "exposureTime", "cycle", "ZpFactor"), names(df))
+  signal_cols <- setdiff(names(df), pheno_cols)
+
+  long_df <- do.call(
+    rbind,
+    lapply(signal_cols, function(signal_col) {
+      tmp <- df[pheno_cols]
+      tmp$ID <- signal_col
+      tmp[[value_name]] <- df[[signal_col]]
+      tmp
+    })
+  )
+
+  long_df$Barcode <- as.integer(long_df$chipID)
+  long_df$Row <- as.integer(sub("^W", "", as.character(long_df$well)))
+  long_df$ExposureTime <- as.integer(sub("^T", "", as.character(long_df$exposureTime)))
+  long_df$Cycle <- as.integer(sub("^P", "", as.character(long_df$cycle)))
+  long_df
+}
+
+build_krsa_tidy_from_outdir <- function(out_dir, sample_annotation, type, group_col = "Test.Condition") {
+  annotation_tbl <- sample_annotation %>%
+    dplyr::filter(Type == type) %>%
+    dplyr::transmute(
+      Barcode = as.integer(Barcode),
+      Row = as.integer(Row),
+      SampleLabel = Sample.name,
+      SampleName = paste0(Sample.name, "_B", Barcode, "_W", Row),
+      Group = .data[[group_col]],
+      Construct = Construct,
+      Biological.Replicate = Biological.Replicate,
+      Technical.Replicate = Technical.Replicate
+    )
+
+  duplicated_annotation_names <- duplicated(annotation_tbl$SampleName)
+  if (any(duplicated_annotation_names)) {
+    stop("SampleName values are not unique in the sample annotation table.")
+  }
+
+  median_wide <- merge_experiments_compatible(out_dir, pattern = "\\.txt$", value = "median")
+  median_bg <- subtract_background_compatible(median_wide)
+  median_long <- wide_metric_to_long(median_bg, "Signal")
+
+  krsa_input <- median_long %>%
+    dplyr::rename(Peptide = ID) %>%
+    dplyr::filter(!Peptide %in% negative_control_names) %>%
+    dplyr::left_join(annotation_tbl, by = c("Barcode", "Row")) %>%
+    dplyr::select(
+      SampleName, SampleLabel, Group, Barcode, Row, ExposureTime, Cycle,
+      Peptide, Signal, Construct, Biological.Replicate, Technical.Replicate
+    ) %>%
+    dplyr::filter(!is.na(SampleName), !is.na(Group), is.finite(Signal)) %>%
+    dplyr::distinct()
+
+  krsa_input
+}
+
+# This mirrors KRSA::krsa_scaleModel() but uses an explicit tidyr::nest()
+# signature and numeric coercions so it remains stable on the current data and
+# package stack.
+krsa_scaleModel_compatible <- function(df, pep, nobs_filter = 0) {
+  df_model <- df %>%
+    dplyr::filter(Peptide %in% pep) %>%
+    dplyr::select(SampleName, Peptide, Group, Barcode, Signal, ExposureTime) %>%
+    tidyr::nest(data = c(Signal, ExposureTime)) %>%
+    dplyr::group_by(SampleName, Peptide) %>%
+    dplyr::mutate(
+      fit = purrr::map(data, ~ stats::lm(Signal ~ ExposureTime + 0, data = .x)),
+      coefs = purrr::map(fit, broom::tidy),
+      summary = purrr::map(fit, broom::glance),
+      slope = purrr::map_dbl(coefs, purrr::pluck, 2, .default = 0),
+      r.seq = purrr::map_dbl(summary, "r.squared"),
+      nobs = purrr::map_dbl(summary, "nobs")
+    ) %>%
+    dplyr::ungroup() %>%
+    dplyr::select(Group, Barcode, SampleName, Peptide, slope, r.seq, nobs) %>%
+    dplyr::mutate(
+      slope = log2(slope * 100),
+      slope = dplyr::if_else(slope < 0, NA_real_, slope),
+      slope = dplyr::if_else(nobs >= nobs_filter, slope, NA_real_),
+      r.seq = dplyr::if_else(nobs >= nobs_filter, r.seq, NA_real_)
+    )
+
+  df_model_norm <- df_model %>%
+    dplyr::group_by(Barcode, Peptide) %>%
+    dplyr::mutate(Mean = mean(slope, na.rm = TRUE)) %>%
+    dplyr::ungroup() %>%
+    dplyr::mutate(
+      slope = dplyr::if_else(Mean == 0, 0, slope / Mean)
+    )
+
+  df_model_grouped <- df_model %>%
+    dplyr::group_by(Group, Peptide) %>%
+    dplyr::summarise(
+      slope = EnvStats::geoMean(as.numeric(slope), na.rm = TRUE),
+      r.seq = EnvStats::geoMean(as.numeric(r.seq), na.rm = TRUE),
+      .groups = "drop"
+    )
+
+  list(
+    scaled = df_model,
+    normalized = df_model_norm,
+    grouped = df_model_grouped
+  )
+}
+
+build_comparisons <- function(groups, control_label = "Control") {
+  case_groups <- setdiff(sort(unique(groups)), control_label)
+  comparisons <- lapply(case_groups, function(case_group) c(case_group, control_label))
+  names(comparisons) <- paste0(case_groups, "_vs_", control_label)
+  comparisons
+}
+
+save_krsa_zscore_plot <- function(z_table, output_path) {
+  if (!nrow(z_table)) {
+    return(NA_character_)
+  }
+
+  plot_tbl <- z_table %>%
+    dplyr::mutate(AvgZ = Z)
+
+  p <- KRSA::krsa_zscores_plot(plot_tbl)
+
+  ggplot2::ggsave(
+    filename = output_path,
+    plot = p,
+    width = 8,
+    height = max(5, min(14, 0.18 * nrow(plot_tbl))),
+    dpi = 150,
+    bg = "white"
+  )
+
+  output_path
+}
+
+run_krsa_for_type <- function(type, out_dir, sample_annotation, map_file, coverage_file,
+                              output_dir, signal_threshold = 0, r2_threshold = 0.9,
+                              signal_scale_factor = 1000, nobs_filter = 0,
+                              lfc_thresholds = c(0.05, 0.1, 0.2),
+                              primary_lfc_threshold = 0.05, control_label = "Control",
+                              group_col = "Test.Condition", krsa_iterations = 2000,
+                              krsa_seed = 123) {
+  dir.create(output_dir, recursive = TRUE, showWarnings = FALSE)
+
+  krsa_input <- build_krsa_tidy_from_outdir(out_dir, sample_annotation, type, group_col = group_col)
+  krsa_input <- krsa_input %>%
+    dplyr::mutate(Signal = Signal * signal_scale_factor)
+  write.csv(krsa_input, file.path(output_dir, paste0("krsa_input_", type, ".csv")), row.names = FALSE)
+
+  mapped_peptides <- sort(intersect(unique(krsa_input$Peptide), unique(map_file$Substrates)))
+  if (!length(mapped_peptides)) {
+    stop(sprintf("No peptides from %s matched the KRSA mapping file.", type))
+  }
+
+  krsa_input <- krsa_input %>%
+    dplyr::filter(Peptide %in% mapped_peptides)
+
+  endpoint_max <- KRSA::krsa_extractEndPointMaxExp(krsa_input, type)
+  endpoint_all <- KRSA::krsa_extractEndPoint(krsa_input, type)
+  modeled <- krsa_scaleModel_compatible(endpoint_all, mapped_peptides, nobs_filter = nobs_filter)
+
+  write.csv(endpoint_max, file.path(output_dir, paste0("endpoint_max_", type, ".csv")), row.names = FALSE)
+  write.csv(modeled$scaled, file.path(output_dir, paste0("modeled_scaled_", type, ".csv")), row.names = FALSE)
+  write.csv(modeled$normalized, file.path(output_dir, paste0("modeled_normalized_", type, ".csv")), row.names = FALSE)
+  write.csv(modeled$grouped, file.path(output_dir, paste0("modeled_grouped_", type, ".csv")), row.names = FALSE)
+
+  input_summary <- tibble::tibble(
+    Type = type,
+    Samples = length(unique(krsa_input$SampleName)),
+    Groups = length(unique(krsa_input$Group)),
+    MappedPeptides = length(mapped_peptides),
+    Rows = nrow(krsa_input),
+    SignalScaleFactor = signal_scale_factor,
+    SignalThreshold = signal_threshold,
+    R2Threshold = r2_threshold,
+    PrimaryLFCThreshold = primary_lfc_threshold
+  )
+
+  comparisons <- build_comparisons(krsa_input$Group, control_label = control_label)
+  comparison_summaries <- list()
+  zscore_plot_paths <- character(0)
+
+  for (comparison_name in names(comparisons)) {
+    groups_to_compare <- comparisons[[comparison_name]]
+    case_group <- groups_to_compare[1]
+    control_group <- groups_to_compare[2]
+
+    comparison_prefix <- file.path(output_dir, comparison_name)
+
+    pep_passed_qc <- tryCatch(
+      KRSA::krsa_quick_filter(
+        data = endpoint_max,
+        data2 = modeled$scaled,
+        signal_threshold = signal_threshold,
+        r2_threshold = r2_threshold,
+        groups = groups_to_compare
+      ),
+      error = function(e) {
+        message(sprintf("QC failed for %s %s: %s", type, comparison_name, e$message))
+        character(0)
+      }
+    )
+
+    write.csv(
+      data.frame(Peptide = pep_passed_qc),
+      paste0(comparison_prefix, "_qc_passed_peptides.csv"),
+      row.names = FALSE
+    )
+
+    if (!length(pep_passed_qc)) {
+      comparison_summaries[[comparison_name]] <- tibble::tibble(
+        Type = type,
+        Comparison = comparison_name,
+        CaseGroup = case_group,
+        ControlGroup = control_group,
+        QCPassedPeptides = 0,
+        PrimaryMeanHits = 0,
+        PrimaryByChipHits = 0,
+        PrimaryCombinedHits = 0,
+        KRSAKinases = 0,
+        Status = "No peptides passed KRSA QC"
+      )
+      next
+    }
+
+    diff_df <- KRSA::krsa_group_diff(
+      modeled$scaled,
+      groups_to_compare,
+      pep_passed_qc,
+      byChip = TRUE
+    )
+    write.csv(diff_df, paste0(comparison_prefix, "_lfc_table.csv"), row.names = FALSE)
+
+    mean_hits <- KRSA::krsa_get_diff(diff_df, totalMeanLFC, lfc_thresholds)
+    bychip_hits <- KRSA::krsa_get_diff_byChip(diff_df, LFC, lfc_thresholds)
+
+    threshold_key <- as.character(primary_lfc_threshold)
+    primary_mean_hits <- sort(unique(mean_hits[[threshold_key]]))
+    primary_bychip_hits <- sort(unique(bychip_hits[[threshold_key]]))
+    primary_combined_hits <- sort(unique(c(primary_mean_hits, primary_bychip_hits)))
+
+    write.csv(
+      data.frame(Peptide = primary_mean_hits),
+      paste0(comparison_prefix, "_primary_mean_hits.csv"),
+      row.names = FALSE
+    )
+    write.csv(
+      data.frame(Peptide = primary_bychip_hits),
+      paste0(comparison_prefix, "_primary_bychip_hits.csv"),
+      row.names = FALSE
+    )
+    write.csv(
+      data.frame(Peptide = primary_combined_hits),
+      paste0(comparison_prefix, "_primary_combined_hits.csv"),
+      row.names = FALSE
+    )
+
+    if (!length(primary_combined_hits)) {
+      comparison_summaries[[comparison_name]] <- tibble::tibble(
+        Type = type,
+        Comparison = comparison_name,
+        CaseGroup = case_group,
+        ControlGroup = control_group,
+        QCPassedPeptides = length(pep_passed_qc),
+        PrimaryMeanHits = length(primary_mean_hits),
+        PrimaryByChipHits = length(primary_bychip_hits),
+        PrimaryCombinedHits = 0,
+        KRSAKinases = 0,
+        Status = "No hit peptides at primary LFC threshold"
+      )
+      next
+    }
+
+    krsa_output <- KRSA::krsa(
+      primary_combined_hits,
+      itr = krsa_iterations,
+      seed = krsa_seed,
+      return_count = TRUE,
+      map_file = map_file,
+      cov_file = coverage_file
+    )
+
+    z_table <- krsa_output$KRSA_Table
+    write.csv(z_table, paste0(comparison_prefix, "_krsa_zscores.csv"), row.names = FALSE)
+    write.csv(krsa_output$count_mtx, paste0(comparison_prefix, "_krsa_count_matrix.csv"), row.names = FALSE)
+
+    zscore_plot_path <- save_krsa_zscore_plot(
+      z_table,
+      paste0(comparison_prefix, "_krsa_zscores.png")
+    )
+
+    if (!is.na(zscore_plot_path)) {
+      zscore_plot_paths <- c(zscore_plot_paths, zscore_plot_path)
+    }
+
+    comparison_summaries[[comparison_name]] <- tibble::tibble(
+      Type = type,
+      Comparison = comparison_name,
+      CaseGroup = case_group,
+      ControlGroup = control_group,
+      QCPassedPeptides = length(pep_passed_qc),
+      PrimaryMeanHits = length(primary_mean_hits),
+      PrimaryByChipHits = length(primary_bychip_hits),
+      PrimaryCombinedHits = length(primary_combined_hits),
+      KRSAKinases = nrow(z_table),
+      Status = "KRSA completed"
+    )
+  }
+
+  comparison_summary <- dplyr::bind_rows(comparison_summaries)
+  write.csv(comparison_summary, file.path(output_dir, paste0("comparison_summary_", type, ".csv")), row.names = FALSE)
+
+  list(
+    input_summary = input_summary,
+    comparison_summary = comparison_summary,
+    zscore_plot_paths = zscore_plot_paths
+  )
+}
+```
+
+## Sample annotation
+
+```{r}
+assert_existing_txt_output(out_dir_PTK, "PTK output directory")
+assert_existing_txt_output(out_dir_STK, "STK output directory")
+
+sample_annotation <- read.csv(sample_annotation_path, stringsAsFactors = FALSE)
+sample_annotation
+```
+
+## Run KRSA for PTK and STK
+
+```{r}
+dir.create(krsa_output_dir, recursive = TRUE, showWarnings = FALSE)
+
+ptk_results <- run_krsa_for_type(
+  type = "PTK",
+  out_dir = out_dir_PTK,
+  sample_annotation = sample_annotation,
+  map_file = KRSA_Mapping_PTK_PamChip_86402_v1,
+  coverage_file = KRSA_coverage_PTK_PamChip_86402_v1,
+  output_dir = file.path(krsa_output_dir, "PTK"),
+  signal_threshold = signal_threshold,
+  r2_threshold = r2_threshold,
+  signal_scale_factor = signal_scale_factor,
+  nobs_filter = nobs_filter,
+  lfc_thresholds = lfc_thresholds,
+  primary_lfc_threshold = primary_lfc_threshold,
+  control_label = control_label,
+  group_col = group_col,
+  krsa_iterations = krsa_iterations,
+  krsa_seed = krsa_seed
+)
+
+stk_results <- run_krsa_for_type(
+  type = "STK",
+  out_dir = out_dir_STK,
+  sample_annotation = sample_annotation,
+  map_file = KRSA_Mapping_STK_PamChip_87102_v1,
+  coverage_file = KRSA_coverage_STK_PamChip_87102_v2,
+  output_dir = file.path(krsa_output_dir, "STK"),
+  signal_threshold = signal_threshold,
+  r2_threshold = r2_threshold,
+  signal_scale_factor = signal_scale_factor,
+  nobs_filter = nobs_filter,
+  lfc_thresholds = lfc_thresholds,
+  primary_lfc_threshold = primary_lfc_threshold,
+  control_label = control_label,
+  group_col = group_col,
+  krsa_iterations = krsa_iterations,
+  krsa_seed = krsa_seed
+)
+```
+
+## Input summary
+
+```{r}
+input_summary <- dplyr::bind_rows(
+  ptk_results$input_summary,
+  stk_results$input_summary
+)
+
+knitr::kable(input_summary, digits = 3)
+```
+
+## Comparison summary
+
+```{r}
+comparison_summary <- dplyr::bind_rows(
+  ptk_results$comparison_summary,
+  stk_results$comparison_summary
+)
+
+write.csv(
+  comparison_summary,
+  file.path(krsa_output_dir, "comparison_summary_all.csv"),
+  row.names = FALSE
+)
+
+knitr::kable(comparison_summary, digits = 3)
+```
+
+## Available KRSA Z score plots
+
+```{r, results='asis'}
+zscore_plot_paths <- c(ptk_results$zscore_plot_paths, stk_results$zscore_plot_paths)
+zscore_plot_paths <- unique(zscore_plot_paths[file.exists(zscore_plot_paths)])
+zscore_plot_paths <- normalizePath(zscore_plot_paths, winslash = "/", mustWork = TRUE)
+
+if (length(zscore_plot_paths)) {
+  knitr::include_graphics(zscore_plot_paths, rel_path = FALSE)
+} else {
+  cat("No KRSA Z score plots were generated at the current thresholds.")
+}
+```
+
+## Runtime
+
+```{r}
+analysis_finished_at <- Sys.time()
+analysis_proc_elapsed <- proc.time() - analysis_proc_start
+
+runtime_summary <- tibble::tibble(
+  started_at = format(analysis_started_at, "%Y-%m-%d %H:%M:%S"),
+  finished_at = format(analysis_finished_at, "%Y-%m-%d %H:%M:%S"),
+  wall_seconds = as.numeric(difftime(analysis_finished_at, analysis_started_at, units = "secs")),
+  wall_minutes = wall_seconds / 60,
+  cpu_user_seconds = unname(analysis_proc_elapsed[["user.self"]]),
+  cpu_system_seconds = unname(analysis_proc_elapsed[["sys.self"]]),
+  cpu_elapsed_seconds = unname(analysis_proc_elapsed[["elapsed"]])
+)
+
+write.csv(
+  runtime_summary,
+  file.path(krsa_output_dir, "krsa_runtime_summary.csv"),
+  row.names = FALSE
+)
+
+runtime_summary
+```

@@ -1,0 +1,21 @@
+# Prefer `conda env create -f environment.yml` when possible.
+# That route installs `inmoose` from Bioconda and often avoids local compiler
+# issues that can appear when pip has to build `inmoose` from source.
+Flask>=3.0
+Pillow>=10.0
+PyYAML>=6.0
+gprofiler-official>=1.0
+gunicorn>=21.2
+inmoose>=0.9.1
+joblib>=1.3
+matplotlib>=3.8
+numba>=0.59
+numpy>=1.26
+opencv-python-headless>=4.9
+openpyxl>=3.1
+pandas>=2.1
+requests>=2.31
+scipy>=1.11
+seaborn>=0.13
+statsmodels>=0.14
+xarray>=2023.0

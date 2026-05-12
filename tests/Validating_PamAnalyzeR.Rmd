@@ -1,0 +1,919 @@
+---
+title: "Validating_PamAnalyzeR"
+output: html_document
+---
+
+# PamgeneAnalyzeR example pipeline
+
+## Load example data
+```{r, include=TRUE}
+library(pamgeneAnalyzeR)
+library(tiff)
+```
+
+```{r timing-start, include=FALSE}
+pipeline_started_at <- Sys.time()
+pipeline_started_proc <- proc.time()
+```
+
+```{r helpers, include=TRUE}
+repo_root <- NULL
+for (candidate in c(".", "..")) {
+  candidate_path <- normalizePath(candidate, winslash = "/", mustWork = FALSE)
+  if (file.exists(file.path(candidate_path, "data", "raw", "Kerthi_HDV_Aug24"))) {
+    repo_root <- candidate_path
+    break
+  }
+}
+
+if (is.null(repo_root)) {
+  stop("Could not locate the repository root from the current working directory.")
+}
+
+repo_path <- function(...) {
+  file.path(repo_root, ...)
+}
+
+load_tiff_as_matrix <- function(path) {
+  img <- tiff::readTIFF(path)
+  # pamgeneAnalyzeR checks for the exact class "matrix".
+  structure(unclass(img), class = "matrix")
+}
+
+read_layout_table <- function(path) {
+  read.table(
+    file = path,
+    header = TRUE,
+    sep = "\t",
+    quote = "",
+    comment.char = ""
+  )
+}
+
+safe_plot_image_from_signal <- function(signal) {
+  signal_plot <- subset(signal, is.finite(x) & is.finite(y) & is.finite(median))
+
+  if (!nrow(signal_plot)) {
+    stop("No finite x/y/median values available for plotting.")
+  }
+
+  g <- min(signal_plot$median, na.rm = TRUE) / max(signal_plot$median, na.rm = TRUE)
+  g <- max(0, min(1, g))
+  background_color <- grey(g)
+
+  ggplot2::ggplot(signal_plot, ggplot2::aes(x = y, y = x, color = median)) +
+    ggplot2::scale_y_reverse() +
+    ggplot2::geom_point(size = 15) +
+    ggplot2::scale_colour_gradientn(colours = c(background_color, "white")) +
+    ggplot2::theme(
+      panel.background = ggplot2::element_rect(fill = background_color),
+      panel.grid = ggplot2::element_blank(),
+      axis.line = ggplot2::element_blank(),
+      axis.text.x = ggplot2::element_blank(),
+      axis.text.y = ggplot2::element_blank(),
+      axis.ticks = ggplot2::element_blank(),
+      axis.title.x = ggplot2::element_blank(),
+      axis.title.y = ggplot2::element_blank(),
+      legend.position = "none",
+      panel.border = ggplot2::element_blank(),
+      panel.grid.major = ggplot2::element_blank(),
+      panel.grid.minor = ggplot2::element_blank(),
+      plot.background = ggplot2::element_blank()
+    )
+}
+
+save_signal_plot <- function(signal, filename, width = 5, height = 4, dpi = 150) {
+  plot_path <- file.path(plot_dir, filename)
+  ggplot2::ggsave(
+    filename = plot_path,
+    plot = safe_plot_image_from_signal(signal),
+    width = width,
+    height = height,
+    dpi = dpi,
+    bg = "white"
+  )
+  plot_path
+}
+
+save_base_plot <- function(filename, expr, width = 7, height = 7, res = 150) {
+  expr <- substitute(expr)
+  plot_path <- file.path(plot_dir, filename)
+  grDevices::png(
+    filename = plot_path,
+    width = width,
+    height = height,
+    units = "in",
+    res = res,
+    bg = "white"
+  )
+  on.exit(grDevices::dev.off(), add = TRUE)
+  eval(expr, envir = parent.frame())
+  plot_path
+}
+
+plot_registration_check <- function(source, target, nLevels = 4,
+                                    maxIterations = 5, useBlockPercentage = 50) {
+  transform <- RNiftyReg::niftyreg(
+    source,
+    target,
+    scope = "rigid",
+    nLevels = nLevels,
+    maxIterations = maxIterations,
+    useBlockPercentage = useBlockPercentage
+  )
+  kernel <- mmand::shapeKernel(c(3, 3))
+  gradient <- mmand::dilate(transform$image, kernel) - mmand::erode(transform$image, kernel)
+  edges <- mmand::threshold(gradient, method = "kmeans")
+
+  plot(imager::as.cimg(t(target)))
+  edge_points <- which(edges > 0, arr.ind = TRUE)
+  points(edge_points[, 2], edge_points[, 1], col = "red", pch = ".")
+}
+
+show_saved_images <- function(paths, width = "48%") {
+  html <- paste(
+    vapply(
+      paths,
+      function(path) {
+        sprintf(
+          '<img src="%s" style="width:%s; margin-right:1%%; margin-bottom:12px;" />',
+          knitr::image_uri(path),
+          width
+        )
+      },
+      character(1)
+    ),
+    collapse = "\n"
+  )
+  knitr::asis_output(html)
+}
+
+build_row_key <- function(df, cols) {
+  do.call(
+    paste,
+    c(
+      lapply(df[cols], function(x) ifelse(is.na(x), "<NA>", as.character(x))),
+      sep = "||"
+    )
+  )
+}
+
+assert_required_columns <- function(df, required_cols, df_name) {
+  missing_cols <- setdiff(required_cols, names(df))
+  if (length(missing_cols)) {
+    stop(sprintf(
+      "%s is missing required columns: %s",
+      df_name,
+      paste(missing_cols, collapse = ", ")
+    ))
+  }
+}
+
+assert_complete_columns <- function(df, cols, df_name) {
+  assert_required_columns(df, cols, df_name)
+  incomplete_rows <- !stats::complete.cases(df[cols])
+  if (any(incomplete_rows)) {
+    stop(sprintf(
+      "%s has %d incomplete rows for columns: %s",
+      df_name,
+      sum(incomplete_rows),
+      paste(cols, collapse = ", ")
+    ))
+  }
+}
+
+report_incomplete_columns <- function(df, cols, df_name) {
+  present_cols <- cols[cols %in% names(df)]
+  if (!length(present_cols)) {
+    return(invisible(NULL))
+  }
+
+  missing_counts <- vapply(
+    present_cols,
+    function(col) sum(is.na(df[[col]])),
+    integer(1)
+  )
+  missing_counts <- missing_counts[missing_counts > 0]
+
+  if (length(missing_counts)) {
+    message(
+      sprintf(
+        "%s contains missing values: %s",
+        df_name,
+        paste(
+          sprintf("%s=%d", names(missing_counts), missing_counts),
+          collapse = ", "
+        )
+      )
+    )
+  }
+
+  invisible(missing_counts)
+}
+
+assert_unique_keys <- function(df, key_cols, df_name) {
+  key_values <- build_row_key(df, key_cols)
+  duplicated_rows <- duplicated(key_values)
+  if (any(duplicated_rows)) {
+    stop(sprintf(
+      "%s contains duplicated keys for: %s",
+      df_name,
+      paste(key_cols, collapse = ", ")
+    ))
+  }
+}
+
+assert_same_key_counts <- function(reference_df, candidate_df, key_cols,
+                                   reference_name, candidate_name) {
+  reference_keys <- table(build_row_key(reference_df, key_cols))
+  candidate_keys <- table(build_row_key(candidate_df, key_cols))
+
+  missing_keys <- setdiff(names(reference_keys), names(candidate_keys))
+  extra_keys <- setdiff(names(candidate_keys), names(reference_keys))
+  shared_keys <- intersect(names(reference_keys), names(candidate_keys))
+  mismatched_counts <- shared_keys[reference_keys[shared_keys] != candidate_keys[shared_keys]]
+
+  if (length(missing_keys) || length(extra_keys) || length(mismatched_counts)) {
+    stop(sprintf(
+      paste(
+        "%s and %s do not contain the same row keys.",
+        "Missing in %s: %d.",
+        "Extra in %s: %d.",
+        "Different multiplicities: %d."
+      ),
+      reference_name,
+      candidate_name,
+      candidate_name,
+      length(missing_keys),
+      candidate_name,
+      length(extra_keys),
+      length(mismatched_counts)
+    ))
+  }
+}
+
+parse_pamgene_filename <- function(path) {
+  filename <- basename(path)
+  matches <- regmatches(
+    filename,
+    regexec("^([0-9]+)_W([0-9]+)_F([0-9]+)_T([0-9]+)_P([0-9]+)_I([0-9]+)_A([0-9]+)\\.(tif|txt)$", filename)
+  )[[1]]
+
+  if (!length(matches)) {
+    stop(sprintf("Could not parse image filename: %s", filename))
+  }
+
+  data.frame(
+    Barcode = as.integer(matches[2]),
+    Row = as.integer(matches[3]),
+    FoV = as.integer(matches[4]),
+    Exposure.Time = as.integer(matches[5]),
+    Cycle = as.integer(matches[6]),
+    Image_number = as.integer(matches[7]),
+    Temperature = as.integer(matches[8]),
+    stringsAsFactors = FALSE
+  )
+}
+
+negative_control_names <- c(
+  "right_background1", "right_background2",
+  "left_background1", "left_background2",
+  "top_background1", "top_background2",
+  "bottom_background1", "bottom_background2"
+)
+
+positive_control_names <- c(
+  "control_right1", "control_right2", "control_right3", "control_right4",
+  "control_left1", "control_left2", "control_left3", "control_left4"
+)
+
+mixed_levels_base <- function(values) {
+  values_chr <- as.character(values)
+  unique_values <- unique(values_chr)
+  unique_numeric <- suppressWarnings(
+    as.numeric(sub("^.*?([0-9]+(?:\\.[0-9]+)?).*$", "\\1", unique_values))
+  )
+  unique_values[order(is.na(unique_numeric), unique_numeric, unique_values)]
+}
+
+resolve_spot_labels <- function(df) {
+  labels <- df$ID
+  use_names <- (is.na(labels) | labels == "#REF") & !is.na(df$names) & df$names != ""
+  labels[use_names] <- df$names[use_names]
+  labels
+}
+
+merge_experiments_compatible <- function(path, pattern = NULL, value = "median") {
+  batch <- sort(dir(path = path, pattern = pattern))
+  d <- NULL
+
+  for (filename in batch) {
+    pam <- pamgeneObject(file = file.path(path, filename))
+    labels <- resolve_spot_labels(pam$data)
+    keep <- !is.na(labels) & labels != "#REF"
+    tmp <- pam$data[keep, value]
+    names(tmp) <- labels[keep]
+    d <- rbind(
+      d,
+      data.frame(
+        chipID = pam$chipID,
+        well = pam$well,
+        cycle = pam$cycle,
+        exposureTime = pam$exposureTime,
+        t(tmp),
+        check.names = FALSE
+      )
+    )
+  }
+
+  d$cycle <- factor(as.character(d$cycle), levels = mixed_levels_base(d$cycle))
+  d$exposureTime <- factor(
+    as.character(d$exposureTime),
+    levels = mixed_levels_base(d$exposureTime)
+  )
+  d
+}
+
+subtract_background_compatible <- function(rawData) {
+  pheno_cols <- intersect(c("chipID", "well", "exposureTime", "cycle", "ZpFactor"), names(rawData))
+  signal_cols <- setdiff(names(rawData), pheno_cols)
+  missing_negative_controls <- setdiff(negative_control_names, signal_cols)
+
+  if (length(missing_negative_controls)) {
+    stop(sprintf(
+      "rawData is missing negative control columns: %s",
+      paste(missing_negative_controls, collapse = ", ")
+    ))
+  }
+
+  signal_df <- rawData[signal_cols]
+  negative_means <- rowMeans(rawData[negative_control_names], na.rm = FALSE)
+  normalized_signal <- as.data.frame(
+    sweep(as.matrix(signal_df), 1, negative_means, FUN = "-"),
+    check.names = FALSE
+  )
+  data.frame(rawData[pheno_cols], normalized_signal, check.names = FALSE)
+}
+
+run_pamgene_pipeline <- function(image_dir, out_dir, target, centers.coords, layout,
+                                 radius = 5, overwrite = FALSE, verbose = TRUE) {
+  tif_files <- sort(list.files(image_dir, pattern = "\\.tif$", full.names = TRUE))
+  dir.create(out_dir, recursive = TRUE, showWarnings = FALSE)
+  txt_files <- sort(list.files(out_dir, pattern = "\\.txt$", full.names = TRUE))
+  expected_txt_files <- sub("\\.tif$", ".txt", basename(tif_files))
+
+  rerun_pipeline <- overwrite || !setequal(basename(txt_files), expected_txt_files)
+
+  if (rerun_pipeline) {
+    if (length(txt_files)) {
+      unlink(txt_files)
+    }
+    if (verbose) {
+      cat("Running registerAllImages for", basename(out_dir), "...\n")
+    }
+    registerAllImages(
+      inDirectory = image_dir,
+      outDirectory = out_dir,
+      target = target,
+      centers.coords = centers.coords,
+      radius = radius,
+      parallel.sig.extract = FALSE,
+      parallel.registration = FALSE,
+      pamgene.layout.file = layout
+    )
+  } else if (verbose) {
+    cat("Using existing PamGeneAnalyzeR TXT files in", out_dir, "\n")
+  }
+
+  txt_files <- sort(list.files(out_dir, pattern = "\\.txt$", full.names = TRUE))
+  if (!setequal(basename(txt_files), expected_txt_files)) {
+    stop(sprintf("registerAllImages did not generate the expected TXT files in %s", out_dir))
+  }
+
+  txt_files
+}
+
+wide_metric_to_long <- function(df, value_name) {
+  pheno_cols <- intersect(c("chipID", "well", "exposureTime", "cycle", "ZpFactor"), names(df))
+  signal_cols <- setdiff(names(df), pheno_cols)
+
+  long_df <- do.call(
+    rbind,
+    lapply(signal_cols, function(signal_col) {
+      tmp <- df[pheno_cols]
+      tmp$ID <- signal_col
+      tmp[[value_name]] <- df[[signal_col]]
+      tmp
+    })
+  )
+
+  long_df$Barcode <- as.integer(long_df$chipID)
+  long_df$Row <- as.integer(sub("^W", "", as.character(long_df$well)))
+  long_df$Exposure.Time <- as.integer(sub("^T", "", as.character(long_df$exposureTime)))
+  long_df$Cycle <- as.integer(sub("^P", "", as.character(long_df$cycle)))
+  long_df
+}
+
+build_pamgene_export_from_pipeline <- function(out_dir, reference_df, output_path = NULL) {
+  required_reference_cols <- c(
+    "image_idx", "Barcode", "Row", "spotRow", "spotCol", "Exposure.Time",
+    "Cycle", "ID", "Sequence", "I_median", "Intensity", "MaxIntensity",
+    "FoV", "Image_number", "Temperature"
+  )
+  reference_key_cols <- c(
+    "image_idx", "Barcode", "Row", "spotRow", "spotCol", "Exposure.Time", "Cycle",
+    "FoV", "Image_number", "Temperature", "ID", "Sequence"
+  )
+  metric_cols <- c("I_median", "Intensity", "MaxIntensity", "Signal_Saturation")
+  image_join_cols <- c(
+    "Barcode", "Row", "FoV", "Exposure.Time", "Cycle", "Image_number", "Temperature"
+  )
+
+  assert_required_columns(reference_df, required_reference_cols, "reference_df")
+  assert_complete_columns(reference_df, required_reference_cols, "reference_df")
+
+  txt_files <- sort(list.files(out_dir, pattern = "\\.txt$", full.names = TRUE))
+  if (!length(txt_files)) {
+    stop(sprintf("No PamGeneAnalyzeR TXT files found in %s", out_dir))
+  }
+
+  image_lookup <- unique(reference_df[c("image_idx", image_join_cols)])
+  assert_unique_keys(image_lookup, image_join_cols, "image_lookup")
+
+  raw_txt_df <- do.call(
+    rbind,
+    lapply(txt_files, function(file) {
+      meta <- parse_pamgene_filename(file)
+      df <- read.delim(file, stringsAsFactors = FALSE)
+      df <- df[df$Row > 0 & df$Col > 0, , drop = FALSE]
+      resolved_ids <- resolve_spot_labels(df)
+      keep <- !is.na(resolved_ids) & resolved_ids != "#REF"
+      df <- df[keep, , drop = FALSE]
+      df$ID <- resolved_ids[keep]
+      df$spotRow <- df$Row
+      df$spotCol <- df$Col
+      df$Barcode <- meta$Barcode
+      df$Row <- meta$Row
+      df$FoV <- meta$FoV
+      df$Exposure.Time <- meta$Exposure.Time
+      df$Cycle <- meta$Cycle
+      df$Image_number <- meta$Image_number
+      df$Temperature <- meta$Temperature
+      df$Intensity <- df$sum
+      df$MaxIntensity <- df$max
+      df$Signal_Saturation <- NA_real_
+      df
+    })
+  )
+
+  raw_image_keys <- unique(build_row_key(raw_txt_df, image_join_cols))
+  raw_txt_df <- merge(
+    raw_txt_df,
+    image_lookup,
+    by = image_join_cols,
+    all = FALSE,
+    sort = FALSE
+  )
+  matched_image_keys <- unique(build_row_key(raw_txt_df, image_join_cols))
+  skipped_images <- setdiff(raw_image_keys, matched_image_keys)
+  if (length(skipped_images)) {
+    message(
+      sprintf(
+        "Skipping %d PamGene image(s) from %s that are not present in reference_df.",
+        length(skipped_images),
+        basename(out_dir)
+      )
+    )
+  }
+  assert_complete_columns(raw_txt_df, "image_idx", "PamGene image metadata merge")
+  assert_unique_keys(raw_txt_df, reference_key_cols, "raw PamGene TXT rows")
+  report_incomplete_columns(
+    raw_txt_df,
+    c("Intensity", "MaxIntensity"),
+    sprintf("raw PamGene TXT rows from %s", basename(out_dir))
+  )
+
+  median_wide <- merge_experiments_compatible(path = out_dir, pattern = "\\.txt$", value = "median")
+  median_bg <- subtract_background_compatible(median_wide)
+  median_long <- wide_metric_to_long(median_bg, "I_median")
+  median_long <- median_long[c("Barcode", "Row", "Exposure.Time", "Cycle", "ID", "I_median")]
+  assert_unique_keys(
+    median_long,
+    c("Barcode", "Row", "Exposure.Time", "Cycle", "ID"),
+    "PamGene median values"
+  )
+
+  out_df <- merge(
+    raw_txt_df,
+    median_long,
+    by = c("Barcode", "Row", "Exposure.Time", "Cycle", "ID"),
+    all.x = TRUE,
+    sort = FALSE
+  )
+  assert_same_key_counts(
+    reference_df = raw_txt_df,
+    candidate_df = out_df,
+    key_cols = reference_key_cols,
+    reference_name = "raw PamGene TXT rows",
+    candidate_name = "PamGene median merge"
+  )
+  report_incomplete_columns(out_df, "I_median", "PamGene median merge")
+
+  metric_df <- out_df[c(reference_key_cols, intersect(metric_cols, names(out_df)))]
+  reference_base <- reference_df[setdiff(names(reference_df), metric_cols)]
+  out_df <- merge(
+    reference_base,
+    metric_df,
+    by = reference_key_cols,
+    all.x = TRUE,
+    sort = FALSE
+  )
+  assert_same_key_counts(
+    reference_df = reference_df,
+    candidate_df = out_df,
+    key_cols = reference_key_cols,
+    reference_name = "reference_df",
+    candidate_name = "PamGeneAnalyzeR export"
+  )
+
+  reference_cols <- names(reference_df)
+  missing_cols <- setdiff(reference_cols, names(out_df))
+  for (col in missing_cols) {
+    out_df[[col]] <- NA
+  }
+
+  out_df <- out_df[reference_cols]
+  out_df <- out_df[order(
+    out_df$Barcode,
+    out_df$Row,
+    out_df$spotRow,
+    out_df$spotCol,
+    out_df$Exposure.Time,
+    out_df$Cycle
+  ), , drop = FALSE]
+  rownames(out_df) <- NULL
+  report_incomplete_columns(
+    out_df,
+    c("I_median", "Intensity", "MaxIntensity", "Signal_Saturation"),
+    "PamGeneAnalyzeR export"
+  )
+
+  if (!is.null(output_path)) {
+    dir.create(dirname(output_path), recursive = TRUE, showWarnings = FALSE)
+    write.csv(out_df, output_path, row.names = FALSE)
+  }
+
+  out_df
+}
+
+compare_pykinaxe_vs_pamgene <- function(py_df, pam_df, output_path = NULL) {
+  metric_candidates <- intersect(
+    c("I_median", "Intensity", "MaxIntensity", "Signal_Saturation"),
+    intersect(names(py_df), names(pam_df))
+  )
+  preferred_key_cols <- c(
+    "image_idx", "Barcode", "Row", "spotRow", "spotCol", "Exposure.Time",
+    "Cycle", "FoV", "Image_number", "Temperature", "ID", "Sequence",
+    "PepProtein_SeqMatch", "PepProtein_UniprotName", "PepProtein_UniprotID",
+    "entrezid", "PepProtein_SeqSimilarity", "Enr_family", "Enr_chip_num"
+  )
+  key_cols <- preferred_key_cols[preferred_key_cols %in% names(py_df) & preferred_key_cols %in% names(pam_df)]
+
+  assert_same_key_counts(
+    reference_df = py_df,
+    candidate_df = pam_df,
+    key_cols = key_cols,
+    reference_name = "pyKinaXe results",
+    candidate_name = "PamGeneAnalyzeR results"
+  )
+
+  metric_cols <- metric_candidates[
+    vapply(
+      metric_candidates,
+      function(metric) {
+        any(!is.na(py_df[[metric]])) && any(!is.na(pam_df[[metric]]))
+      },
+      logical(1)
+    )
+  ]
+  skipped_metrics <- setdiff(metric_candidates, metric_cols)
+
+  if (!length(metric_cols)) {
+    stop("No comparable metrics with values on both sides were found.")
+  }
+  if (length(skipped_metrics)) {
+    message(
+      "Skipping metrics without values on both sides: ",
+      paste(skipped_metrics, collapse = ", ")
+    )
+  }
+
+  build_key <- function(df, cols) {
+    build_row_key(df, cols)
+  }
+
+  py_tmp <- py_df
+  pam_tmp <- pam_df
+  py_tmp$.comparison_group <- build_key(py_tmp, key_cols)
+  pam_tmp$.comparison_group <- build_key(pam_tmp, key_cols)
+  py_tmp$.comparison_occurrence <- ave(
+    seq_len(nrow(py_tmp)),
+    py_tmp$.comparison_group,
+    FUN = seq_along
+  )
+  pam_tmp$.comparison_occurrence <- ave(
+    seq_len(nrow(pam_tmp)),
+    pam_tmp$.comparison_group,
+    FUN = seq_along
+  )
+  py_tmp$.comparison_key <- paste(
+    py_tmp$.comparison_group,
+    py_tmp$.comparison_occurrence,
+    sep = "||rep="
+  )
+  pam_tmp$.comparison_key <- paste(
+    pam_tmp$.comparison_group,
+    pam_tmp$.comparison_occurrence,
+    sep = "||rep="
+  )
+
+  py_cols <- c(".comparison_key", key_cols, metric_cols)
+  pam_cols <- c(".comparison_key", metric_cols)
+  py_tmp <- py_tmp[py_cols]
+  pam_tmp <- pam_tmp[pam_cols]
+  names(py_tmp)[names(py_tmp) %in% metric_cols] <- paste0(metric_cols, "_pyKinaXe")
+  names(pam_tmp)[names(pam_tmp) %in% metric_cols] <- paste0(metric_cols, "_PamGeneAnalyzeR")
+
+  comparison_df <- merge(py_tmp, pam_tmp, by = ".comparison_key", all = FALSE, sort = FALSE)
+  comparison_df$.comparison_order <- match(comparison_df$.comparison_key, py_tmp$.comparison_key)
+  comparison_df <- comparison_df[order(comparison_df$.comparison_order), , drop = FALSE]
+
+  for (metric in metric_cols) {
+    comparison_df[[paste0("diff_", metric)]] <-
+      comparison_df[[paste0(metric, "_pyKinaXe")]] -
+      comparison_df[[paste0(metric, "_PamGeneAnalyzeR")]]
+  }
+
+  comparison_df <- comparison_df[c(
+    key_cols,
+    unlist(lapply(metric_cols, function(metric) {
+      c(
+        paste0(metric, "_pyKinaXe"),
+        paste0(metric, "_PamGeneAnalyzeR"),
+        paste0("diff_", metric)
+      )
+    }))
+  )]
+  comparison_df$.comparison_order <- NULL
+
+  if (!is.null(output_path)) {
+    dir.create(dirname(output_path), recursive = TRUE, showWarnings = FALSE)
+    write.csv(comparison_df, output_path, row.names = FALSE)
+  }
+
+  comparison_df
+}
+
+out_dir_STK <- repo_path("tests", "outDir_STK")
+out_dir_PTK <- repo_path("tests", "outDir_PTK")
+plot_dir <- repo_path("tests", "figures", "Validating_PamAnalyzeR")
+formatted_export_dir <- repo_path("tests", "pamgene_formatted_exports")
+spot_radius <- 5
+force_pipeline_rerun <- TRUE
+dir.create(plot_dir, recursive = TRUE, showWarnings = FALSE)
+dir.create(formatted_export_dir, recursive = TRUE, showWarnings = FALSE)
+```
+
+## Loading the data
+```{r}
+data_path_STK <- repo_path("data", "raw", "Kerthi_HDV_Aug24",
+                           "710483213_710483216-on 1300STKlysv10-run 240821110734",
+                           "ImageResults")
+files_STK <- sort(list.files(data_path_STK))
+
+data_path_PTK <- repo_path("data", "raw", "Kerthi_HDV_Aug24",
+                           "641102408_641102409-on 1200PTKlysv04-run 240822144936",
+                           "ImageResults")
+files_PTK <- sort(list.files(data_path_PTK))
+```
+
+```{r}
+data_path_enrichment <- repo_path("results",
+                                  "20260402160155_Kerthi_HDV_Aug24",
+                                  "710483213_710483216-on 1300STKlysv10-run 240821110734",
+                                  "20260402160155_data_enrichment.csv")
+
+sample_annotation <- read.csv(data_path_enrichment)
+```
+
+## Loading pyKinaXe results
+```{r}
+data_path_pyKinaXe_STK <- repo_path("results",
+                                    "20260402160155_Kerthi_HDV_Aug24",
+                                    "710483213_710483216-on 1300STKlysv10-run 240821110734",
+                                    "20260402160155_Export_image_analysis_STK_filtered.csv")
+df_pyKinaXe_STK <- read.csv(data_path_pyKinaXe_STK)
+
+data_path_pyKinaXe_PTK <- repo_path("results",
+                                    "20260402160155_Kerthi_HDV_Aug24",
+                                    "641102408_641102409-on 1200PTKlysv04-run 240822144936",
+                                    "20260402160155_Export_image_analysis_PTK_filtered.csv")
+df_pyKinaXe_PTK <- read.csv(data_path_pyKinaXe_PTK)
+```
+
+## Choose a reference image
+```{r plot target, include=TRUE, message=FALSE, warning=FALSE, fig.align='center', fig.width=7, fig.height=7}
+target_STK <- load_tiff_as_matrix(file.path(data_path_STK, files_STK[1]))
+target_PTK <- load_tiff_as_matrix(file.path(data_path_PTK, files_PTK[1]))
+```
+
+## Find spots centers coordinates
+```{r plot centers, include=TRUE, results='asis'}
+cc_STK <- find_centers(target_STK)
+cc_PTK <- find_centers(target_PTK)
+
+centers_plot_STK <- save_base_plot(
+  "centers_STK.png",
+  plot_centers(image = target_STK, centers_coords = cc_STK)
+)
+centers_plot_PTK <- save_base_plot(
+  "centers_PTK.png",
+  plot_centers(image = target_PTK, centers_coords = cc_PTK)
+)
+
+show_saved_images(c(centers_plot_STK, centers_plot_PTK))
+```
+
+## Define a radius
+```{r plot circles, include=TRUE, message=FALSE, warning=FALSE, results='asis'}
+circles_plot_STK <- save_base_plot(
+  "circles_STK.png",
+  plot_circles(centers.coords = cc_STK, img = target_STK, radius = spot_radius)
+)
+circles_plot_PTK <- save_base_plot(
+  "circles_PTK.png",
+  plot_circles(centers.coords = cc_PTK, img = target_PTK, radius = spot_radius)
+)
+
+show_saved_images(c(circles_plot_STK, circles_plot_PTK))
+```
+
+## Single-image registration check
+```{r, include=TRUE, fig.align='center', message=FALSE, warning=FALSE}
+STK_layout_path <- repo_path("data", "raw", "Kerthi_HDV_Aug24",
+                             "710483213_710483216-on 1300STKlysv10-run 240821110734",
+                             "710483213_710483216 87102 Array Layout.txt")
+STK_layout <- read_layout_table(STK_layout_path)
+
+PTK_layout_path <- repo_path("data", "raw", "Kerthi_HDV_Aug24",
+                             "641102408_641102409-on 1200PTKlysv04-run 240822144936",
+                             "641102408_641102409 86412 Array Layout.txt")
+PTK_layout <- read_layout_table(PTK_layout_path)
+
+reg_STK <- regiter_one_image(
+  source = load_tiff_as_matrix(file.path(data_path_STK, files_STK[2])),
+  target = target_STK, centers.coords = cc_STK,
+  radius = spot_radius,
+  parallel.sig.extract = FALSE, pamgene.layout.file = STK_layout)
+tail(reg_STK$signal)
+
+reg_PTK <- regiter_one_image(
+  source = load_tiff_as_matrix(file.path(data_path_PTK, files_PTK[2])),
+  target = target_PTK, centers.coords = cc_PTK,
+  radius = spot_radius,
+  parallel.sig.extract = FALSE, pamgene.layout.file = PTK_layout)
+tail(reg_PTK$signal)
+```
+
+## Run official PamGeneAnalyzeR pipeline
+```{r, eval=TRUE}
+run_pamgene_pipeline(
+  image_dir = data_path_STK,
+  out_dir = out_dir_STK,
+  target = target_STK,
+  centers.coords = cc_STK,
+  layout = STK_layout,
+  radius = spot_radius,
+  overwrite = force_pipeline_rerun,
+  verbose = TRUE
+)
+
+run_pamgene_pipeline(
+  image_dir = data_path_PTK,
+  out_dir = out_dir_PTK,
+  target = target_PTK,
+  centers.coords = cc_PTK,
+  layout = PTK_layout,
+  radius = spot_radius,
+  overwrite = force_pipeline_rerun,
+  verbose = TRUE
+)
+```
+
+```{r}
+rawData_STK <- merge_experiments_compatible(path = out_dir_STK, pattern = "\\.txt$", value = "median")
+normData_STK <- subtract_background_compatible(rawData_STK)
+
+rawData_PTK <- merge_experiments_compatible(path = out_dir_PTK, pattern = "\\.txt$", value = "median")
+normData_PTK <- subtract_background_compatible(rawData_PTK)
+```
+
+
+## Pipeline runtime
+```{r}
+pipeline_finished_at <- Sys.time()
+pipeline_finished_proc <- proc.time()
+pipeline_elapsed_wall_seconds <- as.numeric(difftime(
+  pipeline_finished_at,
+  pipeline_started_at,
+  units = "secs"
+))
+pipeline_elapsed_cpu <- pipeline_finished_proc - pipeline_started_proc
+
+pipeline_runtime <- data.frame(
+  started_at = format(pipeline_started_at, "%Y-%m-%d %H:%M:%S"),
+  finished_at = format(pipeline_finished_at, "%Y-%m-%d %H:%M:%S"),
+  wall_seconds = round(pipeline_elapsed_wall_seconds, 2),
+  wall_minutes = round(pipeline_elapsed_wall_seconds / 60, 2),
+  cpu_user_seconds = round(unname(pipeline_elapsed_cpu["user.self"]), 2),
+  cpu_system_seconds = round(unname(pipeline_elapsed_cpu["sys.self"]), 2),
+  cpu_elapsed_seconds = round(unname(pipeline_elapsed_cpu["elapsed"]), 2)
+)
+
+pipeline_runtime
+```
+
+## Build PamGeneAnalyzeR outputs in pyKinaXe format
+```{r, eval=TRUE}
+data_path_pamgene_PTK_export <- file.path(
+  formatted_export_dir,
+  "PamGeneAnalyzeR_PTK_like_pyKinaXe_filtered.csv"
+)
+data_path_pamgene_STK_export <- file.path(
+  formatted_export_dir,
+  "PamGeneAnalyzeR_STK_like_pyKinaXe_filtered.csv"
+)
+
+df_pamgene_PTK <- build_pamgene_export_from_pipeline(
+  out_dir = out_dir_PTK,
+  reference_df = df_pyKinaXe_PTK,
+  output_path = data_path_pamgene_PTK_export
+)
+
+df_pamgene_STK <- build_pamgene_export_from_pipeline(
+  out_dir = out_dir_STK,
+  reference_df = df_pyKinaXe_STK,
+  output_path = data_path_pamgene_STK_export
+)
+```
+
+## Compare pyKinaXe and PamGeneAnalyzeR spotwise
+```{r, eval=TRUE}
+data_path_comparison_PTK <- file.path(
+  formatted_export_dir,
+  "Comparison_pyKinaXe_vs_PamGeneAnalyzeR_PTK.csv"
+)
+data_path_comparison_STK <- file.path(
+  formatted_export_dir,
+  "Comparison_pyKinaXe_vs_PamGeneAnalyzeR_STK.csv"
+)
+
+df_comparison_PTK <- compare_pykinaxe_vs_pamgene(
+  py_df = df_pyKinaXe_PTK,
+  pam_df = df_pamgene_PTK,
+  output_path = data_path_comparison_PTK
+)
+
+df_comparison_STK <- compare_pykinaxe_vs_pamgene(
+  py_df = df_pyKinaXe_STK,
+  pam_df = df_pamgene_STK,
+  output_path = data_path_comparison_STK
+)
+```
+```{r, include=TRUE, message=FALSE, warning=FALSE, results='asis'}
+registration_check_STK <- save_base_plot(
+  "check_registration_STK.png",
+  plot_registration_check(
+    source = load_tiff_as_matrix(file.path(data_path_STK, files_STK[2])),
+    target = target_STK
+  )
+)
+
+registration_check_PTK <- save_base_plot(
+  "check_registration_PTK.png",
+  plot_registration_check(
+    source = load_tiff_as_matrix(file.path(data_path_PTK, files_PTK[2])),
+    target = target_PTK
+  )
+)
+
+show_saved_images(c(registration_check_STK, registration_check_PTK))
+```
+
+## Quality control image
+```{r, include=TRUE, results='asis'}
+qc_plot_STK <- save_signal_plot(reg_STK$signal, "qc_signal_STK.png")
+qc_plot_PTK <- save_signal_plot(reg_PTK$signal, "qc_signal_PTK.png")
+
+show_saved_images(c(qc_plot_STK, qc_plot_PTK))
+```

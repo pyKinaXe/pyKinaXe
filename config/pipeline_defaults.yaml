@@ -1,0 +1,70 @@
+default_peptide_statistics_params:
+  path_file_enrichment_peptides: data/external/PamGene/enrichment_peptides.csv
+  path_output_peptide_statistic: null
+  significance_level_peptides: 0.05
+  use_limma: true
+  log2_slope_mode: epsilon_floor
+  peptide_volcano_plot: true
+  peptide_volcano_plot_GUI: false
+  peptide_volcano_plot_output: null
+  peptide_heatmap_plot: true
+  peptide_heatmap_plot_GUI: false
+  peptide_heatmap_plot_output: null
+
+default_kinase_analysis_params:
+  BLAST_threshold: 80
+  input_stk_ptm_path: data/processed/PTM_Data_OmniPath/stk_interactions.csv
+  input_ptk_ptm_path: data/processed/PTM_Data_OmniPath/ptk_interactions.csv
+  use_verified_interactions_only: false
+  verified_evidence_levels:
+    - curated_literature
+    - curated_source
+    - literature_supported
+  verified_min_score: null
+  verified_min_references: null
+  require_known_ptm_site: false
+  kinase_volcano_plot: true
+  kinase_volcano_plot_GUI: false
+  kinase_volcano_plot_output: null
+  uka_visualization_metric: kinase_change
+  debugging_print: false
+  n_permutations: 10000
+  kpea_lfc_cutoffs:
+    - 0.05
+    - 0.1
+    - 0.2
+  kpea_cutoff_mode: primary
+  kpea_primary_lfc_cutoff: 0.2
+  kpea_substrate_cutoff: 2
+  kpea_zscore_threshold: 1.0
+  kpea_z_cap: 10.0
+  kpea_significance_method: z_score
+  kpea_empirical_p_threshold: 0.05
+  kpea_fdr_threshold: 0.05
+
+default_pathway_enrichment_params:
+  significance_level_pathways: 0.05
+  pathway_heatmap_plot: true
+  pathway_heatmap_plot_GUI: false
+  pathway_heatmap_plot_output: null
+
+default_venn_plot_params:
+  venn_plot: true
+  venn_plot_output: null
+  venn_plot_tables: true
+
+default_uka_kpea_params:
+  path_output: null
+  volcano_plot: true
+  volcano_plot_GUI: false
+  volcano_plot_output: null
+  heatmap_plot: true
+  heatmap_plot_GUI: false
+  heatmap_plot_output: null
+
+runtime_flags:
+  create_publication_figures: false
+  num_representative_images: 1
+  create_processing_stage_figures: false
+  processing_stage_figures_all_images: false
+  processing_stage_figure_image_limit: null

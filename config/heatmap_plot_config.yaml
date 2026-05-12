@@ -1,0 +1,46 @@
+cell:
+  height: 0.25
+  width: 0.3
+  fontsize: 9
+  linewidth: 0.5
+  linecolor: "black"
+
+margins:
+  left: 4.5
+  right: 1.5
+  top: 1.0
+  bottom: 2.0
+
+plot:
+  cmap: "RdBu_r"
+  dpi: 300
+  image_format: "png"
+  title_pad: 20
+
+colorbar:
+  label_fontsize: 12
+  width_factor: 2
+  height_rows: 20
+  offset_x: 0.05
+
+axes:
+  label_fontsize: 12
+  title_fontsize: 14
+  x_tick_rotation: 45
+  x_tick_fontsize: 8
+  y_tick_fontsize: 9
+  x_tick_ha: "right"
+
+tooltip:
+  offset_x: 10
+  offset_y: 10
+  background: "lightyellow"
+  borderwidth: 1
+  padding: 5
+  max_label_length: 50
+
+gui:
+  window_width: 1400
+  window_height: 1000
+  font_family: "Arial"
+  font_size: 12

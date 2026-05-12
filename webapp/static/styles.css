@@ -1,0 +1,764 @@
+:root {
+  --bg: #f5f3ef;
+  --panel: rgba(255, 250, 244, 0.9);
+  --ink: #1f2430;
+  --muted: #5e6572;
+  --line: rgba(158, 137, 126, 0.22);
+  --accent: #215a6d;
+  --accent-2: #c96f34;
+  --good: #2f6f44;
+  --bad: #8a2d2d;
+  --shadow: 0 18px 45px rgba(31, 36, 48, 0.08);
+  --heat-blue: rgba(58, 118, 191, 0.14);
+  --heat-red: rgba(204, 78, 78, 0.13);
+  --heat-blue-soft: rgba(58, 118, 191, 0.05);
+  --heat-red-soft: rgba(204, 78, 78, 0.05);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html, body {
+  overflow-x: hidden;
+}
+
+body {
+  margin: 0;
+  font-family: "Avenir Next", "Segoe UI", sans-serif;
+    background: var(--bg);
+  color: var(--ink);
+  position: relative;
+}
+
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0.56;
+  background-image:
+    linear-gradient(rgba(33, 88, 230, 0.52), rgba(33, 88, 230, 0.52)),
+    linear-gradient(rgba(58, 112, 243, 0.49), rgba(58, 112, 243, 0.49)),
+    linear-gradient(rgba(77, 129, 247, 0.47), rgba(77, 129, 247, 0.47)),
+    linear-gradient(rgba(42, 103, 236, 0.44), rgba(42, 103, 236, 0.44)),
+    linear-gradient(rgba(28, 82, 219, 0.5), rgba(28, 82, 219, 0.5)),
+    linear-gradient(rgba(70, 120, 245, 0.46), rgba(70, 120, 245, 0.46)),
+    linear-gradient(rgba(95, 144, 249, 0.43), rgba(95, 144, 249, 0.43)),
+    linear-gradient(rgba(52, 109, 240, 0.41), rgba(52, 109, 240, 0.41)),
+    linear-gradient(rgba(39, 95, 232, 0.47), rgba(39, 95, 232, 0.47)),
+    linear-gradient(rgba(86, 136, 248, 0.44), rgba(86, 136, 248, 0.44)),
+    linear-gradient(rgba(61, 115, 242, 0.43), rgba(61, 115, 242, 0.43)),
+    linear-gradient(rgba(110, 154, 250, 0.4), rgba(110, 154, 250, 0.4)),
+    linear-gradient(rgba(24, 78, 216, 0.46), rgba(24, 78, 216, 0.46)),
+    linear-gradient(rgba(74, 124, 246, 0.43), rgba(74, 124, 246, 0.43)),
+    linear-gradient(rgba(96, 143, 249, 0.41), rgba(96, 143, 249, 0.41)),
+    linear-gradient(rgba(48, 106, 239, 0.38), rgba(48, 106, 239, 0.38)),
+    linear-gradient(rgba(37, 92, 231, 0.49), rgba(37, 92, 231, 0.49)),
+    linear-gradient(rgba(68, 118, 244, 0.44), rgba(68, 118, 244, 0.44)),
+    linear-gradient(rgba(87, 137, 248, 0.41), rgba(87, 137, 248, 0.41)),
+    linear-gradient(rgba(54, 111, 241, 0.39), rgba(54, 111, 241, 0.39)),
+    linear-gradient(rgba(31, 86, 226, 0.5), rgba(31, 86, 226, 0.5)),
+    linear-gradient(rgba(63, 116, 243, 0.46), rgba(63, 116, 243, 0.46)),
+    linear-gradient(rgba(90, 141, 249, 0.42), rgba(90, 141, 249, 0.42)),
+    linear-gradient(rgba(49, 107, 239, 0.39), rgba(49, 107, 239, 0.39)),
+    linear-gradient(rgba(24, 79, 217, 0.47), rgba(24, 79, 217, 0.47)),
+    linear-gradient(rgba(72, 123, 246, 0.43), rgba(72, 123, 246, 0.43)),
+    linear-gradient(rgba(104, 149, 250, 0.4), rgba(104, 149, 250, 0.4)),
+    linear-gradient(rgba(56, 111, 241, 0.38), rgba(56, 111, 241, 0.38)),
+    linear-gradient(rgba(34, 90, 229, 0.49), rgba(34, 90, 229, 0.49)),
+    linear-gradient(rgba(66, 119, 244, 0.44), rgba(66, 119, 244, 0.44)),
+    linear-gradient(rgba(92, 142, 249, 0.41), rgba(92, 142, 249, 0.41)),
+    linear-gradient(rgba(52, 109, 240, 0.38), rgba(52, 109, 240, 0.38)),
+    linear-gradient(rgba(27, 83, 221, 0.48), rgba(27, 83, 221, 0.48)),
+    linear-gradient(rgba(60, 113, 242, 0.44), rgba(60, 113, 242, 0.44)),
+    linear-gradient(rgba(85, 135, 248, 0.41), rgba(85, 135, 248, 0.41)),
+    linear-gradient(rgba(46, 103, 237, 0.38), rgba(46, 103, 237, 0.38)),
+    linear-gradient(rgba(23, 79, 217, 0.46), rgba(23, 79, 217, 0.46)),
+    linear-gradient(rgba(69, 121, 245, 0.43), rgba(69, 121, 245, 0.43)),
+    linear-gradient(rgba(100, 147, 250, 0.4), rgba(100, 147, 250, 0.4)),
+    linear-gradient(rgba(54, 110, 241, 0.38), rgba(54, 110, 241, 0.38)),
+    linear-gradient(rgba(36, 91, 230, 0.47), rgba(36, 91, 230, 0.47)),
+    linear-gradient(rgba(73, 124, 246, 0.43), rgba(73, 124, 246, 0.43)),
+    linear-gradient(rgba(97, 144, 249, 0.41), rgba(97, 144, 249, 0.41)),
+    linear-gradient(rgba(239, 79, 79, 0.4), rgba(239, 79, 79, 0.4)),
+    linear-gradient(rgba(255, 54, 54, 0.53), rgba(255, 54, 54, 0.53)),
+    linear-gradient(rgba(244, 66, 66, 0.5), rgba(244, 66, 66, 0.5)),
+    linear-gradient(rgba(255, 87, 87, 0.49), rgba(255, 87, 87, 0.49)),
+    linear-gradient(rgba(239, 74, 74, 0.46), rgba(239, 74, 74, 0.46)),
+    linear-gradient(rgba(255, 43, 43, 0.52), rgba(255, 43, 43, 0.52)),
+    linear-gradient(rgba(246, 93, 93, 0.48), rgba(246, 93, 93, 0.48)),
+    linear-gradient(rgba(255, 110, 110, 0.44), rgba(255, 110, 110, 0.44)),
+    linear-gradient(rgba(236, 72, 72, 0.41), rgba(236, 72, 72, 0.41)),
+    linear-gradient(rgba(250, 61, 61, 0.49), rgba(250, 61, 61, 0.49)),
+    linear-gradient(rgba(255, 99, 99, 0.46), rgba(255, 99, 99, 0.46)),
+    linear-gradient(rgba(241, 81, 81, 0.43), rgba(241, 81, 81, 0.43)),
+    linear-gradient(rgba(255, 122, 122, 0.4), rgba(255, 122, 122, 0.4)),
+    linear-gradient(rgba(233, 59, 59, 0.47), rgba(233, 59, 59, 0.47)),
+    linear-gradient(rgba(247, 90, 90, 0.44), rgba(247, 90, 90, 0.44)),
+    linear-gradient(rgba(255, 113, 113, 0.41), rgba(255, 113, 113, 0.41)),
+    linear-gradient(rgba(238, 76, 76, 0.38), rgba(238, 76, 76, 0.38)),
+    linear-gradient(rgba(251, 68, 68, 0.49), rgba(251, 68, 68, 0.49)),
+    linear-gradient(rgba(244, 86, 86, 0.44), rgba(244, 86, 86, 0.44)),
+    linear-gradient(rgba(255, 118, 118, 0.41), rgba(255, 118, 118, 0.41)),
+    linear-gradient(rgba(239, 79, 79, 0.4), rgba(239, 79, 79, 0.4)),
+    linear-gradient(rgba(252, 61, 61, 0.51), rgba(252, 61, 61, 0.51)),
+    linear-gradient(rgba(245, 83, 83, 0.47), rgba(245, 83, 83, 0.47)),
+    linear-gradient(rgba(255, 114, 114, 0.43), rgba(255, 114, 114, 0.43)),
+    linear-gradient(rgba(238, 76, 76, 0.39), rgba(238, 76, 76, 0.39)),
+    linear-gradient(rgba(233, 57, 57, 0.48), rgba(233, 57, 57, 0.48)),
+    linear-gradient(rgba(247, 89, 89, 0.44), rgba(247, 89, 89, 0.44)),
+    linear-gradient(rgba(255, 120, 120, 0.41), rgba(255, 120, 120, 0.41)),
+    linear-gradient(rgba(239, 81, 81, 0.38), rgba(239, 81, 81, 0.38)),
+    linear-gradient(rgba(251, 67, 67, 0.49), rgba(251, 67, 67, 0.49)),
+    linear-gradient(rgba(244, 85, 85, 0.45), rgba(244, 85, 85, 0.45)),
+    linear-gradient(rgba(255, 117, 117, 0.41), rgba(255, 117, 117, 0.41)),
+    linear-gradient(rgba(236, 61, 61, 0.48), rgba(236, 61, 61, 0.48)),
+    linear-gradient(rgba(246, 88, 88, 0.44), rgba(246, 88, 88, 0.44)),
+    linear-gradient(rgba(255, 116, 116, 0.41), rgba(255, 116, 116, 0.41)),
+    linear-gradient(rgba(239, 78, 78, 0.38), rgba(239, 78, 78, 0.38)),
+    linear-gradient(rgba(251, 66, 66, 0.49), rgba(251, 66, 66, 0.49)),
+    linear-gradient(rgba(244, 84, 84, 0.45), rgba(244, 84, 84, 0.45)),
+    linear-gradient(rgba(255, 119, 119, 0.41), rgba(255, 119, 119, 0.41)),
+    linear-gradient(rgba(238, 80, 80, 0.38), rgba(238, 80, 80, 0.38)),
+    linear-gradient(rgba(252, 69, 69, 0.49), rgba(252, 69, 69, 0.49)),
+    linear-gradient(rgba(245, 90, 90, 0.44), rgba(245, 90, 90, 0.44)),
+    linear-gradient(rgba(255, 121, 121, 0.4), rgba(255, 121, 121, 0.4));
+  background-repeat: no-repeat;
+  background-size:
+    54px 54px,
+    50px 50px,
+    46px 46px,
+    42px 42px,
+    38px 38px,
+    48px 48px,
+    44px 44px,
+    40px 40px,
+    36px 36px,
+    32px 32px,
+    42px 42px,
+    38px 38px,
+    34px 34px,
+    30px 30px,
+    26px 26px,
+    34px 34px,
+    30px 30px,
+    26px 26px,
+    22px 22px,
+    18px 18px,
+    30px 30px,
+    27px 27px,
+    23px 23px,
+    20px 20px,
+    18px 18px,
+    24px 24px,
+    21px 21px,
+    18px 18px,
+    16px 16px,
+    22px 22px,
+    19px 19px,
+    16px 16px,
+    28px 28px,
+    24px 24px,
+    21px 21px,
+    18px 18px,
+    16px 16px,
+    22px 22px,
+    19px 19px,
+    16px 16px,
+    14px 14px,
+    18px 18px,
+    16px 16px,
+    14px 14px,
+    54px 54px,
+    50px 50px,
+    46px 46px,
+    42px 42px,
+    38px 38px,
+    48px 48px,
+    44px 44px,
+    40px 40px,
+    36px 36px,
+    32px 32px,
+    42px 42px,
+    38px 38px,
+    34px 34px,
+    30px 30px,
+    26px 26px,
+    34px 34px,
+    30px 30px,
+    26px 26px,
+    22px 22px,
+    18px 18px,
+    30px 30px,
+    27px 27px,
+    23px 23px,
+    20px 20px,
+    18px 18px,
+    24px 24px,
+    21px 21px,
+    18px 18px,
+    16px 16px,
+    22px 22px,
+    19px 19px,
+    16px 16px,
+    28px 28px,
+    24px 24px,
+    21px 21px,
+    18px 18px,
+    16px 16px,
+    22px 22px,
+    19px 19px,
+    16px 16px,
+    14px 14px,
+    18px 18px,
+    16px 16px,
+    14px 14px,
+    13px 13px;
+  background-position:
+    0.1% 0.1%,
+    5% 0.9%,
+    10.3% 0.7%,
+    15.6% 1.2%,
+    21% 0.8%,
+    0.5% 6.4%,
+    5.7% 6.9%,
+    11.1% 6.3%,
+    16.4% 7.2%,
+    21.6% 6.8%,
+    1% 12.6%,
+    6.2% 12.9%,
+    11.6% 12.4%,
+    16.8% 13.1%,
+    22.1% 12.8%,
+    0.4% 18.9%,
+    5.8% 19.4%,
+    11.3% 19.1%,
+    16.9% 19.8%,
+    0.2% 24.8%,
+    6.1% 24.5%,
+    11.9% 24.2%,
+    17.7% 24.9%,
+    23.1% 24.1%,
+    0.9% 29.1%,
+    6.7% 29.5%,
+    12.4% 29.2%,
+    18.1% 29.8%,
+    1.7% 33.1%,
+    7.6% 33.5%,
+    13.4% 33.3%,
+    19.3% 33.8%,
+    24.8% 33.1%,
+    2.3% 37.2%,
+    8.2% 37.7%,
+    14.1% 37.5%,
+    20.1% 38.1%,
+    26.1% 37.4%,
+    3.3% 41.5%,
+    9.4% 41.9%,
+    15.3% 41.7%,
+    21.3% 42.2%,
+    27.2% 6.1%,
+    86.9% 102.7%,
+    92.2% 102.1%,
+    97.5% 101.2%,
+    102.7% 100.4%,
+    105.4% 96.1%,
+    80.8% 97.9%,
+    86.1% 97.1%,
+    91.5% 95.9%,
+    96.9% 94.4%,
+    102.2% 92.7%,
+    75.2% 92.9%,
+    80.7% 91.9%,
+    86.3% 90.7%,
+    91.7% 89.2%,
+    97.3% 87.6%,
+    70.1% 87.4%,
+    75.8% 86.2%,
+    81.4% 84.9%,
+    87.0% 83.3%,
+    105.8% 81.2%,
+    92.8% 82.2%,
+    98.2% 80.7%,
+    103.6% 79.2%,
+    88.1% 77.9%,
+    82.7% 78.9%,
+    93.3% 76.5%,
+    98.8% 75.1%,
+    104.1% 73.9%,
+    87.2% 73.8%,
+    92.6% 72.4%,
+    98.0% 71.1%,
+    103.4% 69.8%,
+    81.8% 69.7%,
+    87.4% 68.5%,
+    93.0% 67.2%,
+    98.5% 65.9%,
+    104.0% 64.5%,
+    76.6% 65.4%,
+    82.3% 64.2%,
+    88.0% 62.8%,
+    93.7% 61.6%,
+    99.3% 60.3%,
+    104.4% 58.7%;
+  z-index: 0;
+}
+
+body::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+    background: none;
+  z-index: 0;
+}
+
+.page {
+  width: min(1100px, calc(100vw - 32px));
+  margin: 0 auto;
+  padding: 40px 0 64px;
+  position: relative;
+  z-index: 1;
+}
+
+.viewer-presence {
+  position: fixed;
+  top: 16px;
+  right: 18px;
+  z-index: 3;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 14px;
+  border-radius: 999px;
+  border: 1px solid rgba(33, 90, 109, 0.18);
+  background: rgba(255, 252, 248, 0.86);
+  color: var(--muted);
+  box-shadow: 0 10px 26px rgba(31, 36, 48, 0.08);
+  backdrop-filter: blur(8px);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.viewer-presence-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 999px;
+  background: rgba(47, 111, 68, 0.9);
+  box-shadow: 0 0 0 5px rgba(47, 111, 68, 0.13);
+  flex: 0 0 auto;
+}
+
+.hero {
+  padding: 20px 4px 28px;
+  position: relative;
+}
+
+.eyebrow {
+  margin: 0 0 8px;
+  text-transform: uppercase;
+  letter-spacing: 0.2em;
+  color: var(--accent);
+  font-weight: 700;
+  font-size: 28px;
+}
+
+.eyebrow-py {
+  color: rgba(0, 125, 193, 0.583);
+  text-transform: lowercase;
+  font-family: 'Brush Script MT', sans-serif;
+  letter-spacing: +0.0em;
+  margin-right: 0.1em;
+  font-size: 35px;
+}
+
+.eyebrow-x {
+  color: rgba(190, 75, 75, 0.95);
+}
+
+h1, h2, h3 {
+  margin: 0;
+  font-family: Brush Script MT, cursive;
+}
+
+h2 {
+  font-size: clamp(17px, 3vw, 28px);
+  line-height: 1;
+  max-width: 55ch;
+  color: rgb(179, 117, 122);
+  font-weight: 400;
+}
+
+.lede {
+  margin: 18px 0 0;
+  max-width: 70ch;
+  color: var(--muted);
+  font-size: 18px;
+  line-height: 1.6;
+}
+
+.panel {
+  background:
+    linear-gradient(140deg, rgba(255, 255, 255, 0.78), rgba(255, 249, 242, 0.72)),
+    linear-gradient(90deg, var(--heat-blue-soft), rgba(255,255,255,0) 34%, var(--heat-red-soft)),
+    linear-gradient(90deg, rgba(58, 118, 191, 0.03) 0 10%, transparent 10% 20%, rgba(204, 78, 78, 0.025) 20% 30%, transparent 30% 40%, rgba(58, 118, 191, 0.025) 40% 50%, transparent 50% 60%, rgba(204, 78, 78, 0.025) 60% 70%, transparent 70% 80%, rgba(58, 118, 191, 0.025) 80% 90%, transparent 90% 100%);
+  border: 1px solid var(--line);
+  border-radius: 20px;
+  box-shadow: var(--shadow);
+  padding: 26px;
+  margin-top: 18px;
+  backdrop-filter: blur(8px);
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(270px, 1fr));
+  gap: 18px;
+}
+
+.field {
+  display: grid;
+  gap: 8px;
+  padding: 18px;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background:
+    linear-gradient(135deg, rgba(255,255,255,0.84), rgba(255,255,255,0.62)),
+    linear-gradient(90deg, rgba(58, 118, 191, 0.05), rgba(204, 78, 78, 0.04)),
+    linear-gradient(90deg, rgba(58, 118, 191, 0.03) 0 14%, transparent 14% 28%, rgba(204, 78, 78, 0.03) 28% 42%, transparent 42% 56%, rgba(58, 118, 191, 0.025) 56% 70%, transparent 70% 84%, rgba(204, 78, 78, 0.025) 84% 100%);
+}
+
+.field span {
+  font-weight: 700;
+}
+
+.field small {
+  color: var(--muted);
+  line-height: 1.45;
+}
+
+input[type="file"] {
+  width: 100%;
+}
+
+.folder-input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.folder-picker {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: fit-content;
+  border-radius: 999px;
+  padding: 7px 12px;
+  border: 1px solid rgba(120, 117, 117, 0.55);
+  color: rgba(1, 44, 77, 0.55);
+  background: rgba(255, 255, 255, 0.95);
+  font-weight: 700;
+  font-size: 13px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.folder-picker:focus-visible {
+  outline: 2px solid rgba(125, 161, 172, 0.35);
+  outline-offset: 3px;
+}
+
+.folder-selection {
+  color: var(--muted);
+  line-height: 1.4;
+  font-size: 14px;
+}
+
+.path-input {
+  width: 100%;
+  margin-top: 2px;
+  padding: 10px 12px;
+  border-radius: 14px;
+  border: 1px solid rgba(120, 117, 117, 0.24);
+  background: rgba(255, 255, 255, 0.9);
+  color: var(--ink);
+  font: inherit;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+}
+
+.path-input::placeholder {
+  color: rgba(94, 101, 114, 0.7);
+}
+
+.path-input:focus {
+  outline: none;
+  border-color: rgba(33, 90, 109, 0.34);
+  box-shadow: 0 0 0 4px rgba(33, 90, 109, 0.08);
+  background: rgba(255, 255, 255, 0.98);
+}
+
+.actions {
+  margin-top: 18px;
+}
+
+button {
+  appearance: none;
+  border: 1px solid var(--accent);
+  border-radius: 999px;
+  padding: 10px 16px;
+  background: rgba(255, 255, 255, 0.55);
+  color: var(--accent);
+  font-weight: 700;
+  font-size: 15px;
+  cursor: pointer;
+  box-shadow: none;
+}
+
+button:disabled {
+  opacity: 0.5;
+  cursor: wait;
+}
+
+.run-button {
+  border-color: rgba(190, 110, 110, 0.75);
+  color: rgba(150, 82, 82, 0.98);
+  background:
+    linear-gradient(
+      90deg,
+      rgba(58, 118, 191, 0.08),
+      rgba(255, 255, 255, 0.68) 45%,
+      rgba(204, 78, 78, 0.08)
+    );
+}
+
+.run-button-label {
+  color: rgba(33, 90, 109, 0.92);
+}
+
+.run-button-x {
+  color: rgba(190, 75, 75, 0.95);
+}
+
+.status {
+  margin-top: 18px;
+  padding: 14px 16px;
+  border-radius: 14px;
+  border: 1px solid var(--line);
+  background:
+    linear-gradient(90deg, rgba(58, 118, 191, 0.05), rgba(255,255,255,0.74) 42%, rgba(204, 78, 78, 0.05));
+}
+
+.status.running {
+  border-color: rgba(33, 90, 109, 0.25);
+}
+
+.status.completed {
+  border-color: rgba(47, 111, 68, 0.35);
+  color: var(--good);
+}
+
+.status.failed {
+  border-color: rgba(138, 45, 45, 0.35);
+  color: var(--bad);
+}
+
+.hidden {
+  display: none;
+}
+
+.results-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: flex-start;
+  margin-bottom: 18px;
+}
+
+/* Larger, blue section heading for the top "Results" title. */
+.results-head h4 {
+  font-size: 1.45rem;
+  line-height: 1.2;
+  margin: 0 0 6px;
+  color: #2a6cb0;
+  letter-spacing: 0.01em;
+}
+
+/* Red, slightly larger sub-section headings inside the results panel. */
+.result-block > h4 {
+  font-size: 1.45rem;
+  line-height: 1.2;
+  margin: 0 0 6px;
+  color: rgb(179, 117, 122);
+  letter-spacing: 0.01em;
+}
+
+/* "Job progress" label styled like the "PTK folder" / "STK folder" labels. */
+.section-label {
+  display: block;
+  font-weight: 700;
+  margin-bottom: 4px;
+}
+
+.job-progress-block {
+  display: flex;
+  flex-direction: column;
+  margin-top: 26px;
+  margin-bottom: 4px;
+  gap: 4px;
+}
+
+.job-progress-block .log-panel {
+  margin-top: 0;
+}
+
+.muted {
+  color: var(--muted);
+}
+
+.download-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  padding: 10px 16px;
+  border: 1px solid var(--accent);
+  color: var(--accent);
+  text-decoration: none;
+  font-weight: 700;
+  background: rgba(255, 255, 255, 0.55);
+}
+
+.result-block + .result-block {
+  margin-top: 28px;
+}
+
+.log-panel {
+  margin-top: 14px;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background:
+    linear-gradient(180deg, rgba(255,255,255,0.82), rgba(255,249,242,0.72)),
+    linear-gradient(90deg, rgba(58, 118, 191, 0.04), rgba(204, 78, 78, 0.035)),
+    linear-gradient(90deg, rgba(58, 118, 191, 0.025) 0 12%, transparent 12% 24%, rgba(204, 78, 78, 0.025) 24% 36%, transparent 36% 48%, rgba(58, 118, 191, 0.02) 48% 60%, transparent 60% 72%, rgba(204, 78, 78, 0.02) 72% 84%, transparent 84% 100%);
+  padding: 14px;
+  max-height: 260px;
+  overflow: auto;
+}
+
+.log-empty {
+  color: var(--muted);
+}
+
+.log-list {
+  display: grid;
+  gap: 10px;
+}
+
+.log-item {
+  display: grid;
+  grid-template-columns: 150px 1fr;
+  gap: 12px;
+  align-items: start;
+  padding-bottom: 10px;
+  border-bottom: 1px dashed rgba(215, 203, 181, 0.9);
+}
+
+.log-item:last-child {
+  border-bottom: 0;
+  padding-bottom: 0;
+}
+
+.log-time {
+  color: var(--accent);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.log-message {
+  color: var(--ink);
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+}
+
+.stack {
+  display: grid;
+  gap: 14px;
+  margin-top: 14px;
+}
+
+.card {
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  padding: 16px;
+  background:
+    linear-gradient(135deg, rgba(255,255,255,0.84), rgba(255,255,255,0.64)),
+    linear-gradient(90deg, rgba(58, 118, 191, 0.05), rgba(204, 78, 78, 0.04)),
+    linear-gradient(90deg, rgba(58, 118, 191, 0.03) 0 15%, transparent 15% 30%, rgba(204, 78, 78, 0.03) 30% 45%, transparent 45% 60%, rgba(58, 118, 191, 0.025) 60% 75%, transparent 75% 90%, rgba(204, 78, 78, 0.025) 90% 100%);
+}
+
+.card h4 {
+  margin: 0 0 8px;
+}
+
+.csv-line {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+  line-height: 1.5;
+  color: var(--muted);
+}
+
+.heatmaps {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 18px;
+  margin-top: 14px;
+}
+
+@media (max-width: 1100px) {
+  .heatmaps {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 720px) {
+  .heatmaps {
+    grid-template-columns: 1fr;
+  }
+}
+
+.heatmap-card {
+  display: flex;
+  flex-direction: column;
+}
+
+.heatmap-card img {
+  width: 100%;
+  max-width: 100%;
+  display: block;
+  border-radius: 12px;
+  border: 1px solid var(--line);
+  background: white;
+  box-shadow: 0 16px 30px rgba(31, 36, 48, 0.08);
+}
+
+code {
+  font-family: "SFMono-Regular", Consolas, monospace;
+}
+
+@media (max-width: 640px) {
+  .viewer-presence {
+    top: 10px;
+    right: 10px;
+    left: 10px;
+    justify-content: center;
+    font-size: 12px;
+  }
+}

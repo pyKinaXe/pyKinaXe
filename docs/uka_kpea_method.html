@@ -1,0 +1,470 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Current UKA/KPEA Method</title>
+  <style>
+    :root {
+      --bg: #f6f7fb;
+      --panel: #ffffff;
+      --ink: #1d2433;
+      --muted: #57617a;
+      --line: #d8deea;
+      --accent: #0f5c8c;
+      --mono-bg: #f1f4f9;
+    }
+    body {
+      margin: 0;
+      padding: 0;
+      background: linear-gradient(180deg, #eef3f9 0%, #f8fafc 100%);
+      color: var(--ink);
+      font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+      line-height: 1.6;
+    }
+    main {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 32px 20px 72px;
+    }
+    h1, h2, h3 {
+      line-height: 1.25;
+      margin-top: 0;
+      color: #102033;
+    }
+    h1 { font-size: 2.2rem; margin-bottom: 0.35rem; }
+    h2 {
+      font-size: 1.5rem;
+      margin-top: 2rem;
+      margin-bottom: 0.75rem;
+      padding-bottom: 0.4rem;
+      border-bottom: 2px solid var(--line);
+    }
+    h3 { font-size: 1.15rem; margin-top: 1.5rem; margin-bottom: 0.45rem; }
+    p, li { color: var(--ink); font-size: 1rem; }
+    p { margin: 0 0 1rem; }
+    ul, ol { margin: 0.4rem 0 1rem 1.4rem; }
+    li > ul, li > ol { margin-top: 0.5rem; margin-bottom: 0.2rem; }
+    code {
+      background: var(--mono-bg);
+      padding: 0.1rem 0.35rem;
+      border-radius: 6px;
+      font-family: Menlo, Consolas, Monaco, monospace;
+      font-size: 0.95em;
+    }
+    pre {
+      background: var(--mono-bg);
+      padding: 14px 16px;
+      border-radius: 12px;
+      overflow-x: auto;
+      border: 1px solid var(--line);
+    }
+    pre code { background: transparent; padding: 0; border-radius: 0; }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      background: var(--panel);
+      margin: 14px 0 18px;
+      border-radius: 12px;
+      overflow: hidden;
+      border: 1px solid var(--line);
+    }
+    th, td {
+      text-align: left;
+      vertical-align: top;
+      padding: 10px 12px;
+      border-bottom: 1px solid var(--line);
+    }
+    th { background: #edf3fb; }
+    tr:last-child td { border-bottom: none; }
+  </style>
+</head>
+<body>
+  <main>
+      <h1>Current UKA/KPEA Method</h1>
+      <p>This document summarizes the current downstream analysis method used by pyKinaXe after image processing has produced PTK/STK spot intensities.</p>
+      <p>It is the Markdown companion to the HTML note and uses the <strong>current module names</strong> from the repository:</p>
+      <ul><li>
+      <code>src/kx_peptide_analysis.py</code>
+      </li><li>
+      <code>src/kx_upstream_kinase_analysis.py</code>
+      </li><li>
+      <code>src/kx_pathway_enrichment_analysis.py</code>
+      </li><li>
+      <code>src/kx_pipeline_tools.py</code>
+      </li></ul>
+      <h2>Short Summary</h2>
+      <p>The current UKA/KPEA workflow is a staged downstream analysis with three main parts:</p>
+      <ol><li>
+      peptide-level statistics
+      </li><li>
+      upstream kinase activity analysis
+      </li><li>
+      pathway enrichment
+      </li></ol>
+      <p>The kinase-analysis core is a <strong>KRSA-like, permutation-based enrichment test</strong> operating at the level of individual kinases.</p>
+      <p>What the core tests:</p>
+      <ul><li>
+      whether substrate peptides assigned to a kinase appear among the strongly changed peptides
+       more often or less often than expected by chance
+      </li></ul>
+      <p>What it does <strong>not</strong> test directly:</p>
+      <ul><li>
+      it does not directly prove kinase activation or inhibition
+      </li><li>
+      the primary enrichment direction is first an overrepresentation / underrepresentation signal
+      </li></ul>
+      <h2>1. Overall Workflow</h2>
+      <p>At a high level, the downstream analysis does the following:</p>
+      <ol><li>
+      load the enriched experimental design table
+      </li><li>
+      build peptide-level PTK/STK matrices from processed image outputs
+      </li><li>
+      compute peptide statistics per condition
+      </li><li>
+      load BLAST-derived peptide-to-protein mappings
+      </li><li>
+      load PTM / kinase-substrate interaction resources
+      </li><li>
+      build kinase-to-peptide mappings
+      </li><li>
+      run the KRSA-like enrichment test across one or more cutoffs
+      </li><li>
+      assign significance using z-score, empirical p-value, or FDR
+      </li><li>
+      optionally run pathway enrichment and generate plots
+      </li></ol>
+      <p>In simple terms:</p>
+      <ul><li>
+      first the code turns processed chip signals into peptide-level condition effects
+      </li><li>
+      then it asks which kinases are unusually enriched among changed peptides
+      </li><li>
+      finally it summarizes those kinase results at pathway level
+      </li></ul>
+      <h2>2. Stage 1: Peptide Statistics</h2>
+      <p>Stage 1 is implemented mainly in <code>PeptideStatistics</code> in <code>src/kx_peptide_analysis.py</code>.</p>
+      <h3>2.1 Inputs</h3>
+      <p>This stage uses:</p>
+      <ul><li>
+      the enriched PTK/STK design table from <code>DataEnricher</code>
+      </li><li>
+      the processed PTK outputs from <code>ImageProcessor</code>
+      </li><li>
+      the processed STK outputs from <code>ImageProcessor</code>
+      </li></ul>
+      <h3>2.2 Experiment Design</h3>
+      <p>The peptide statistics stage relies on the enriched table to know:</p>
+      <ul><li>
+      which samples belong to control
+      </li><li>
+      which samples belong to each test condition
+      </li><li>
+      which PTK/STK rows belong to the same condition comparison
+      </li></ul>
+      <p>This is one reason why correct sample naming and replicate annotation matter so much.</p>
+      <h3>2.3 Slope And Log2 Transformation</h3>
+      <p>The image-processing pipeline produces per-spot values that are then converted into analysis-ready peptide measurements. A slope is estimated across exposure times, and that slope is then log2-transformed.</p>
+      <p>The parameter <code>log2_slope_mode</code> controls how small values are handled:</p>
+      <ul><li>
+      <code>pamgene_zero</code>: slopes <code>&lt;= 1</code> are effectively floored to <code>0</code>
+      </li><li>
+      <code>epsilon_floor</code>: uses <code>log2(max(slope, epsilon))</code>
+      </li></ul>
+      <h3>2.4 Main Peptide-Level Quantities</h3>
+      <p>The peptide statistics stage produces several important columns:</p>
+      <table>
+      <thead><tr><th>Column</th><th>Meaning</th></tr></thead>
+      <tbody>
+      <tr><td><code>peptide_change</code></td><td>mean treatment minus mean control</td></tr>
+      <tr><td><code>peptide_statistic</code></td><td>peptide effect normalized by estimated standard error</td></tr>
+      <tr><td><code>t_statistic</code></td><td>moderated limma t-statistic or classical t-statistic</td></tr>
+      <tr><td><code>p_value</code></td><td>peptide p-value</td></tr>
+      <tr><td><code>pamgene_snr</code></td><td>PamGene-style signal-to-noise quantity</td></tr>
+      </tbody>
+      </table>
+      <h3>2.5 Core Formulas</h3>
+      <p>For peptide <code>j</code>, with control values <code>C_j</code> and treatment values <code>T_j</code>:</p>
+      <pre><code>mean_control_j   = mean(C_j)
+mean_treatment_j = mean(T_j)
+SD_control_j     = sample_sd(C_j)
+SD_treatment_j   = sample_sd(T_j)</code></pre>
+      <p>The main effect size is:</p>
+      <pre><code>peptide_change_j = mean_treatment_j - mean_control_j</code></pre>
+      <p>The repository also computes:</p>
+      <pre><code>denom_j = sqrt((SD_control_j^2 / n_control_j) + (SD_treatment_j^2 / n_treatment_j))
+peptide_statistic_j = peptide_change_j / denom_j</code></pre>
+      <p>If the denominator is zero, the implementation avoids infinities by setting <code>peptide_statistic</code> to <code>0</code>.</p>
+      <h3>2.6 LIMMA / inmoose</h3>
+      <p>If <code>use_limma=True</code>, pyKinaXe uses <code>inmoose.limma</code> to fit a moderated model across the peptide-by-sample matrix. In that case:</p>
+      <ul><li>
+      <code>t_statistic</code> and <code>p_value</code> come from the moderated limma fit
+      </li><li>
+      moderated variance-related information is also retained
+      </li></ul>
+      <p>If LIMMA is disabled, a classical two-sample t-test is used instead.</p>
+      <p>Important practical point:</p>
+      <ul><li>
+      the downstream KRSA-like kinase core does <strong>not</strong> use the limma t-statistic as
+       its primary hit-definition score
+      </li><li>
+      it primarily uses <code>peptide_change</code>
+      </li></ul>
+      <h3>2.7 PamGene SNR</h3>
+      <p>An additional PamGene-style signal-to-noise quantity is also computed:</p>
+      <pre><code>pamgene_snr_j =
+  (mean_treatment_j - mean_control_j) /
+  sqrt(SD_treatment_j^2 + SD_control_j^2)</code></pre>
+      <p>This is conceptually different from <code>peptide_statistic</code>, because it does not also divide by group size in the same way.</p>
+      <h2>3. Stage 2: Upstream Kinase Analysis</h2>
+      <p>Stage 2 is implemented mainly in <code>KinaseActivityAnalysis</code> in <code>src/kx_upstream_kinase_analysis.py</code>.</p>
+      <h3>3.1 Inputs To The Kinase Stage</h3>
+      <p>The kinase stage combines:</p>
+      <ul><li>
+      peptide statistics from stage 1
+      </li><li>
+      peptide-enrichment annotation resources
+      </li><li>
+      BLAST-derived peptide-to-protein mappings
+      </li><li>
+      PTM / kinase-substrate interaction databases
+      </li></ul>
+      <p>Optional strictness controls include:</p>
+      <ul><li>
+      <code>use_verified_interactions_only=True</code>
+      </li><li>
+      <code>require_known_ptm_site=True</code>
+      </li></ul>
+      <p>These make the mapping stricter, often reducing the number of kinase-peptide links.</p>
+      <h3>3.2 What The KRSA-Like Core Uses</h3>
+      <p>The active enrichment core is the KPEA / KRSA-like routine inside <code>src/kx_upstream_kinase_analysis.py</code>.</p>
+      <p>Its primary inputs are:</p>
+      <ul><li>
+      the pooled peptide dataset for one comparison
+      </li><li>
+      the kinase-to-peptide mapping
+      </li><li>
+      the vector of <code>peptide_change</code> values
+      </li><li>
+      the vector of <code>peptide_statistic</code> values
+      </li></ul>
+      <p>Important current behavior:</p>
+      <ul><li>
+      <strong>hit definition is driven primarily by <code>peptide_change</code></strong>
+      </li><li>
+      <code>peptide_statistic</code> contributes descriptive peptide summaries, but the main
+       KRSA-style hit lists are thresholded from peptide changes
+      </li></ul>
+      <h2>4. Hit Definition And Cutoffs</h2>
+      <p>The algorithm can evaluate one or more absolute fold-change-like cutoffs via:</p>
+      <ul><li>
+      <code>kpea_lfc_cutoffs</code>
+      </li></ul>
+      <p>Example:</p>
+      <pre><code>[0.2, 0.3, 0.4]</code></pre>
+      <p>For each cutoff:</p>
+      <ul><li>
+      peptides with sufficiently large absolute <code>peptide_change</code> become hits
+      </li><li>
+      the algorithm counts how many hit peptides map to each kinase
+      </li></ul>
+      <p>The cutoff mode is controlled by <code>kpea_cutoff_mode</code>:</p>
+      <ul><li>
+      <code>average</code>: combine information across several cutoffs
+      </li><li>
+      <code>primary</code>: use one selected cutoff only
+      </li></ul>
+      <p>The primary cutoff can be set via:</p>
+      <ul><li>
+      <code>kpea_primary_lfc_cutoff</code>
+      </li></ul>
+      <h2>5. KRSA-Like Enrichment Logic</h2>
+      <p>For each kinase and each cutoff, pyKinaXe asks:</p>
+      <ul><li>
+      among the peptides mapped to this kinase, how many are in the hit list?
+      </li><li>
+      is that count larger or smaller than expected by chance?
+      </li></ul>
+      <h3>5.1 Observed Count</h3>
+      <p>For each kinase:</p>
+      <ul><li>
+      determine the substrate peptides assigned to that kinase
+      </li><li>
+      count how many of those peptides are currently in the hit list
+      </li></ul>
+      <h3>5.2 Null Distribution</h3>
+      <p>The null distribution is generated through permutations:</p>
+      <ul><li>
+      the hit list size is preserved
+      </li><li>
+      hit labels are redistributed many times
+      </li><li>
+      the default analysis may use values such as <code>n_permutations = 5000</code>
+      </li></ul>
+      <p>This builds an expected count distribution for each kinase at each cutoff.</p>
+      <h3>5.3 Z-Score</h3>
+      <p>The observed kinase hit count is compared to the permutation null:</p>
+      <pre><code>Z = (observed_count - mean_null_count) / sd_null_count</code></pre>
+      <p>Interpretation:</p>
+      <ul><li>
+      <code>Z &gt; 0</code>: overrepresentation
+      </li><li>
+      <code>Z &lt; 0</code>: underrepresentation
+      </li><li>
+      larger <code>|Z|</code>: stronger deviation from the null
+      </li></ul>
+      <h3>5.4 Combining Across Cutoffs</h3>
+      <p>If <code>kpea_cutoff_mode=&quot;average&quot;</code>:</p>
+      <ul><li>
+      the z-scores across cutoffs are averaged into a signed summary score
+      </li></ul>
+      <p>If <code>kpea_cutoff_mode=&quot;primary&quot;</code>:</p>
+      <ul><li>
+      the final score comes from one selected cutoff only
+      </li></ul>
+      <p>Important output columns include:</p>
+      <table>
+      <thead><tr><th>Column</th><th>Meaning</th></tr></thead>
+      <tbody>
+      <tr><td><code>KRSA_MeanZ</code></td><td>signed mean z-score across cutoffs</td></tr>
+      <tr><td><code>KRSA_AbsMeanZ</code></td><td>absolute value of the mean z-score</td></tr>
+      <tr><td><code>KPEA_AbsDominantZ</code></td><td>compatibility / alias-style absolute summary score</td></tr>
+      </tbody>
+      </table>
+      <h2>6. Significance</h2>
+      <p>The final significance framework can use one of:</p>
+      <ul><li>
+      <code>z_score</code>
+      </li><li>
+      <code>p_value</code>
+      </li><li>
+      <code>fdr</code>
+      </li></ul>
+      <p>This is controlled by:</p>
+      <ul><li>
+      <code>kpea_significance_method</code>
+      </li></ul>
+      <p>Additional thresholds include:</p>
+      <ul><li>
+      <code>kpea_zscore_threshold</code>
+      </li><li>
+      <code>kpea_empirical_p_threshold</code>
+      </li><li>
+      <code>kpea_fdr_threshold</code>
+      </li></ul>
+      <p>There is also a substrate-support filter:</p>
+      <ul><li>
+      <code>kpea_substrate_cutoff</code>
+      </li><li>
+      <code>support_filtered_min_num_substrates</code>
+      </li></ul>
+      <p>This means the workflow distinguishes between:</p>
+      <ul><li>
+      raw statistical significance
+      </li><li>
+      reportable significance after minimum-support filtering
+      </li></ul>
+      <h2>7. Important Kinase Output Columns</h2>
+      <p>The kinase stage writes tables with columns such as:</p>
+      <table>
+      <thead><tr><th>Column</th><th>Meaning</th></tr></thead>
+      <tbody>
+      <tr><td><code>Kinase</code></td><td>kinase identifier</td></tr>
+      <tr><td><code>NumSubstrates</code></td><td>number of mapped substrate peptides</td></tr>
+      <tr><td><code>MedianPeptideStatistic</code></td><td>median peptide statistic over substrates</td></tr>
+      <tr><td><code>MeanPeptideStatistic</code></td><td>mean peptide statistic over substrates</td></tr>
+      <tr><td><code>KinaseChange</code></td><td>mean substrate peptide change</td></tr>
+      <tr><td><code>Direction</code></td><td>overrepresented / underrepresented / none</td></tr>
+      <tr><td><code>Direction_PeptideMean</code></td><td>descriptive direction from mean substrate change</td></tr>
+      <tr><td><code>KRSA_MeanZ</code></td><td>signed enrichment z-score summary</td></tr>
+      <tr><td><code>KRSA_AbsMeanZ</code></td><td>absolute enrichment z-score summary</td></tr>
+      <tr><td><code>p_value</code></td><td>empirical permutation p-value</td></tr>
+      <tr><td><code>FDR</code></td><td>BH-corrected p-value</td></tr>
+      <tr><td><code>NegLog10EmpiricalP</code></td><td><code>-log10(p_value)</code></td></tr>
+      <tr><td><code>KPEA_CutoffMode</code></td><td>whether <code>average</code> or <code>primary</code> scoring was used</td></tr>
+      <tr><td><code>KPEA_SelectedCutoff</code></td><td>selected primary cutoff, if applicable</td></tr>
+      <tr><td><code>Significant</code></td><td>raw significance flag</td></tr>
+      <tr><td><code>SelectedForReport</code></td><td>significance plus support filtering</td></tr>
+      </tbody>
+      </table>
+      <h2>8. Stage 3: Pathway Enrichment</h2>
+      <p>Stage 3 is implemented mainly in <code>PathwayEnrichmentAnalysis</code> in <code>src/kx_pathway_enrichment_analysis.py</code>.</p>
+      <p>This stage:</p>
+      <ul><li>
+      takes significant kinase results
+      </li><li>
+      submits ranked/significant kinase lists to g:Profiler
+      </li><li>
+      summarizes pathways across sources such as KEGG, Reactome, and WikiPathways
+      </li><li>
+      generates pathway heatmaps and venn-ready result sets
+      </li></ul>
+      <p>This stage is conceptually downstream of the kinase-enrichment stage and does not redefine the kinase-scoring method itself.</p>
+      <h2>9. Practical Interpretation Notes</h2>
+      <p>Several interpretation points are important:</p>
+      <ol><li>
+      <code>Direction = overrepresented</code> does <strong>not</strong> automatically mean direct kinase activation.
+      </li><li>
+      <code>Direction = underrepresented</code> does <strong>not</strong> automatically mean direct kinase inhibition.
+      </li><li>
+      The most biologically intuitive directional signal often lives in:
+      <ul><li>
+      <code>KinaseChange</code>
+      </li><li>
+      <code>Direction_PeptideMean</code>
+      </li></ul>
+      </li><li>
+      Mapping strictness has a major effect on which kinases survive:
+      <ul><li>
+      verified-only filtering is stricter
+      </li><li>
+      known-site filtering is stricter
+      </li></ul>
+      </li><li>
+      The choice of cutoff grid and permutation count can materially affect which kinases are emphasized.
+      </li></ol>
+      <h2>10. Parameter Sensitivity</h2>
+      <p>The following parameters are especially influential:</p>
+      <table>
+      <thead><tr><th>Parameter</th><th>Effect</th></tr></thead>
+      <tbody>
+      <tr><td><code>kpea_lfc_cutoffs</code></td><td>lower values create larger hit lists; higher values are stricter</td></tr>
+      <tr><td><code>kpea_cutoff_mode</code></td><td><code>average</code> smooths across cutoffs; <code>primary</code> uses a single cutoff</td></tr>
+      <tr><td><code>kpea_primary_lfc_cutoff</code></td><td>chooses the single cutoff used in primary mode</td></tr>
+      <tr><td><code>kpea_zscore_threshold</code></td><td>larger threshold is stricter for z-score significance</td></tr>
+      <tr><td><code>kpea_empirical_p_threshold</code></td><td>larger threshold is less strict</td></tr>
+      <tr><td><code>kpea_fdr_threshold</code></td><td>larger threshold is less strict</td></tr>
+      <tr><td><code>kpea_substrate_cutoff</code></td><td>filters kinases with too few substrates early</td></tr>
+      <tr><td><code>support_filtered_min_num_substrates</code></td><td>controls reporting strictness</td></tr>
+      <tr><td><code>n_permutations</code></td><td>more permutations improve stability but increase runtime</td></tr>
+      <tr><td><code>use_verified_interactions_only</code></td><td>stricter kinase-substrate mapping</td></tr>
+      <tr><td><code>require_known_ptm_site</code></td><td>stricter site-level evidence filtering</td></tr>
+      </tbody>
+      </table>
+      <h2>11. Bottom Line</h2>
+      <p>The current pyKinaXe downstream method is:</p>
+      <ul><li>
+      a complete staged PTK/STK downstream workflow
+      </li><li>
+      with peptide statistics followed by kinase enrichment and pathway enrichment
+      </li><li>
+      using a KRSA-like, permutation-based kinase-enrichment core
+      </li><li>
+      operating on individual kinase mappings
+      </li><li>
+      driven primarily by peptide-change hit lists
+      </li><li>
+      with optional strict mapping filters and support-based reporting filters
+      </li></ul>
+      <p>In short:</p>
+      <ul><li>
+      stage 1 asks which peptides changed
+      </li><li>
+      stage 2 asks which kinases are unusually represented among those changed peptides
+      </li><li>
+      stage 3 asks which pathways are enriched among the significant kinase results
+      </li></ul>
+  </main>
+</body>
+</html>

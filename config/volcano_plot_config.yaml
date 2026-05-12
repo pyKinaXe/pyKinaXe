@@ -1,0 +1,63 @@
+scatter:
+  size_significant: 30
+  size_not_significant: 20
+  alpha_significant: 0.7
+  alpha_not_significant: 0.5
+  color_up: "red"
+  color_down: "blue"
+  color_not_significant: "gray"
+
+threshold_lines:
+  p_color: "green"
+  p_linestyle: "--"
+  p_linewidth: 1
+  z_color: "green"
+  z_linestyle: "--"
+  z_linewidth: 1
+  delta_color: "orange"
+  delta_linestyle: "--"
+  delta_linewidth: 1
+  center_color: "black"
+  center_linestyle: "-"
+  center_linewidth: 0.5
+
+axes:
+  label_fontsize: 12
+  title_fontsize: 14
+  grid_alpha: 0.3
+
+legend:
+  fontsize: 10
+  markerscale: 1.0
+  loc: "upper right"
+  framealpha: 0.9
+  edgecolor: "black"
+  handlelength: 2.0
+  handleheight: 1.5
+  labelspacing: 0.5
+  borderpad: 0.5
+  handletextpad: 0.8
+  marker_size_significant: 10
+  marker_size_not_significant: 8
+
+plot:
+  figsize_width: 12
+  figsize_height: 8
+  dpi: 300
+  image_format: "png"
+
+hover:
+  threshold: 0.02
+
+tooltip:
+  offset_x: 10
+  offset_y: 10
+  background: "lightyellow"
+  borderwidth: 1
+  padding: 5
+
+gui:
+  window_width: 1400
+  window_height: 1200
+  font_family: "Arial"
+  font_size: 12

@@ -1,0 +1,81 @@
+reference_dimensions:
+  width: 697
+  height: 520
+
+edge_detection_statistics:
+  horizontal:
+    left_1: {median: 166.0, std: 10.0}
+    right_1: {median: 542.0, std: 10.0}
+    left_2: {median: 166.0, std: 10.0}
+    right_2: {median: 542.0, std: 10.0}
+    left_3: {median: 166.0, std: 10.0}
+    right_3: {median: 542.0, std: 10.0}
+    left_4: {median: 174.0, std: 10.0}
+    right_4: {median: 543.0, std: 10.0}
+    left_5: {median: 174.0, std: 10.0}
+    right_5: {median: 543.0, std: 10.0}
+    left_6: {median: 174.0, std: 10.0}
+    right_6: {median: 543.0, std: 10.0}
+  vertical:
+    top_1: {median: 126.0, std: 10.0}
+    bottom_1: {median: 390.0, std: 10.0}
+    top_2: {median: 126.0, std: 10.0}
+    bottom_2: {median: 390.0, std: 10.0}
+    top_3: {median: 126.0, std: 10.0}
+    bottom_3: {median: 390.0, std: 10.0}
+    top_4: {median: 105.0, std: 10.0}
+    bottom_4: {median: 415.0, std: 10.0}
+    top_5: {median: 105.0, std: 10.0}
+    bottom_5: {median: 415.0, std: 10.0}
+    top_6: {median: 105.0, std: 10.0}
+    bottom_6: {median: 415.0, std: 10.0}
+  center:
+    x: {median: 357.0, std: 10.0}
+    y: {median: 259.0, std: 10.0}
+  n_std: 4.0
+
+grid:
+  spot_spacing: 21.5
+  edge_offset: 21.5
+  ptk_grid_rows: 14
+  ptk_grid_cols: 14
+  stk_grid_rows: 12
+  stk_grid_cols: 12
+  ptk_h_offset_multiplier: 1
+  ptk_v_offset_multiplier: 5
+  stk_h_offset_multiplier: 2
+  stk_v_offset_multiplier: 4
+  ptk_square_side_multiplier: 15
+  stk_square_side_multiplier: 13
+  ref_vertical_spacing_offset: -1
+
+filtering:
+  stk_filter_cycle: 124
+  ptk_filter_cycles: [32, 37, 42, 47, 52, 57, 62, 67, 72, 77, 82, 87, 92, 94]
+  ptk_filter_exposure_times: [10, 50, 200]
+
+paths:
+  default_enrichment_file: data/external/PamGene/enrichment_peptides.csv
+
+init_defaults:
+  radius: 265.0
+  smooth_sigma: 5.0
+  horizontal_y1: 50
+  horizontal_y2: 32
+  horizontal_y3: 14
+  horizontal_y4: 470
+  horizontal_y5: 488
+  horizontal_y6: 506
+  vertical_x1: 110
+  vertical_x2: 92
+  vertical_x3: 74
+  vertical_x4: 590
+  vertical_x5: 608
+  vertical_x6: 626
+  edge_band_half_width: 6
+  edge_padding: 50
+  use_constrained_search: true
+  gamma: 1.8
+  median_kernel_size: 30
+  canny_low_threshold: 0.04
+  canny_high_threshold: 0.12
