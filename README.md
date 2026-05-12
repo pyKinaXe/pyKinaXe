@@ -1,14 +1,3 @@
----
-title: pyKinaXe
-emoji: 🧬
-colorFrom: red
-colorTo: blue
-sdk: docker
-app_port: 7860
-pinned: false
-license: apache-2.0
----
-
 <img src="docs/img/logo.png" alt="pyKinaXe logo" width="90%" align="left" hspace="20" />
 
 <img src="docs/img/pic.png" alt="pyKinaXe" width="90%" />
