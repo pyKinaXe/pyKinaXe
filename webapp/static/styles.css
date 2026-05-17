@@ -26,7 +26,7 @@ html, body {
 body {
   margin: 0;
   font-family: "Avenir Next", "Segoe UI", sans-serif;
-    background: var(--bg);
+  background: var(--bg);
   color: var(--ink);
   position: relative;
 }
@@ -303,6 +303,35 @@ body::before {
     99.3% 60.3%,
     104.4% 58.7%;
   z-index: 0;
+}
+
+.reference-panel {
+  margin-top: 1.5rem;
+}
+
+.reference-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 1rem;
+}
+
+.reference-card {
+  padding: 1rem 1.1rem;
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.58);
+  box-shadow: 0 10px 22px rgba(31, 36, 48, 0.05);
+}
+
+.reference-text {
+  margin: 0.55rem 0 0;
+  color: var(--muted);
+  line-height: 1.6;
+}
+
+.reference-text a {
+  color: var(--accent);
+  word-break: break-word;
 }
 
 body::after {

@@ -24,7 +24,23 @@ The repository contains both a terminal pipeline and a Flask-based web backend.
 The core engine of pyKinaXe lives in `src/`, most user-adjustable defaults live in
 `config/`, and the web runtime lives in `webapp/`.
 
-## What The Codebase Does
+## More information
+
+More information on pyKinaXe is provided in the paper:
+
+Wuttke D, Hildt E, Kolesnichenko PV. *pyKinaXe: a fast and robust turnkey kinase activity profiler with high resolution*. bioRxiv 2026.05.12.724658. [https://doi.org/10.64898/2026.05.12.724658](https://doi.org/10.64898/2026.05.12.724658)
+
+## Validation Dataset
+
+Validation data for this project is available here:
+
+[https://doi.org/10.17632/ynp7f92n47.1](https://doi.org/10.17632/ynp7f92n47.1)
+
+If you use the dataset, please cite:
+
+Thiyagarajah K, Glitscher M, Hildt E. *Raw kinome array data - Differential impact of hepatitis delta virus replication and expression of viral antigens on the cellular kinome profile*. Mendeley Data, V1. [https://doi.org/10.17632/ynp7f92n47.1](https://doi.org/10.17632/ynp7f92n47.1)
+
+## What pyKinaXe Does
 
 At a high level, pyKinaXe
 
