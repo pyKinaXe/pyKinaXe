@@ -1,0 +1,5 @@
+dataset,array,stage,wall_seconds,cpu_seconds,n_images,note
+benchmarking,STK,pamgeneAnalyzeR,127.716,0.582,208,
+benchmarking,ALL,pamgeneAnalyzeR (dataset),127.716,0.582,208,
+benchmarking,ALL,KRSA (dataset),0,0,NA,
+benchmarking,ALL,TOTAL (dataset),127.845,0.582,208,

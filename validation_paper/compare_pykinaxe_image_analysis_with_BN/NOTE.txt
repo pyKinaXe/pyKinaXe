@@ -1,0 +1,24 @@
+Spot-level comparison: pyKinaXe against BioNavigator
+====================================================
+
+Compares pyKinaXe's spot intensities with BioNavigator's on the same chips,
+for the rat and the benchmarking dataset.
+
+Run (from the repository root):
+
+    python validation_paper/compare_pykinaxe_image_analysis_with_BN/compare_image_analysis_BN.py
+
+Input:
+    exports_BN/         BioNavigator exports (copies of data/<dataset>/Exports_image_analysis_BN/)
+    exports_pykinaxe/   pyKinaXe exports, one folder per dataset with the PTK and
+                        STK chip folders of one pipeline run
+
+Output:
+    output/<dataset>/   agreement plots per array and spot_intensities.csv;
+                        the statistics are printed to the terminal
+
+To replace the pyKinaXe exports, run the pipeline
+(python scripts/kx_kinase_extraction_pipeline.py, choose the dataset with its
+PTK and then its STK run folder) and copy the chip folders from
+results/<dataset>/<timestamp>_image_processing/<timestamp>_<dataset>/ into
+exports_pykinaxe/<dataset folder>/, replacing the old ones.

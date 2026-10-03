@@ -1,0 +1,17 @@
+Barcode,Row,Sample name,Construct,Type,Supergroup,Test Condition,Condition Role,Biological Replicate,Technical Replicate
+641102408,1,pSHDAg_2_1,pSHDAg,PTK,Sgroup1,pSHDAg,test,2,1
+641102408,2,pLHDAg_2_1,pLHDAg,PTK,Sgroup1,pLHDAg,test,2,1
+641102408,3,pSVLD3_2_1,pSVLD3,PTK,Sgroup1,pSVLD3,test,2,1
+641102408,4,mock_2_1,mock,PTK,Sgroup1,mock,control,2,1
+641102409,1,mock_2_2,mock,PTK,Sgroup1,mock,control,2,2
+641102409,2,pSVLD3_2_2,pSVLD3,PTK,Sgroup1,pSVLD3,test,2,2
+641102409,3,pLHDAg_2_2,pLHDAg,PTK,Sgroup1,pLHDAg,test,2,2
+641102409,4,pSHDAg_2_2,pSHDAg,PTK,Sgroup1,pSHDAg,test,2,2
+710483213,1,pSHDAg_2_1,pSHDAg,STK,Sgroup1,pSHDAg,test,2,1
+710483213,2,pLHDAg_2_1,pLHDAg,STK,Sgroup1,pLHDAg,test,2,1
+710483213,3,pSVLD3_2_1,pSVLD3,STK,Sgroup1,pSVLD3,test,2,1
+710483213,4,mock_2_1,mock,STK,Sgroup1,mock,control,2,1
+710483216,1,mock_2_2,mock,STK,Sgroup1,mock,control,2,2
+710483216,2,pSVLD3_2_2,pSVLD3,STK,Sgroup1,pSVLD3,test,2,2
+710483216,3,pLHDAg_2_2,pLHDAg,STK,Sgroup1,pLHDAg,test,2,2
+710483216,4,pSHDAg_2_2,pSHDAg,STK,Sgroup1,pSHDAg,test,2,2

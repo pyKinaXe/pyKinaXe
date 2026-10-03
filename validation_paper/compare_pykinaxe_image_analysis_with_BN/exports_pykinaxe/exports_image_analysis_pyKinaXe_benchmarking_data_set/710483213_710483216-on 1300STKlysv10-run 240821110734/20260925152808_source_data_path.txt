@@ -1,0 +1,7 @@
+Source Data Path:
+data/benchmarking_data_set/710483213_710483216-on 1300STKlysv10-run 240821110734
+
+Experiment Name: benchmarking_data_set
+Subfolder Name: 710483213_710483216-on 1300STKlysv10-run 240821110734
+Peptides Type: STK
+Analysis Timestamp: 20260925152808

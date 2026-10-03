@@ -1,0 +1,204 @@
+# Configuration for compare_image_analysis_BN.py. Local to this comparison; the
+# pipeline does not read it. Every entry under `datasets:` is compared in one
+# run and written into its own subfolder of `output:` (output/rat/,
+# output/benchmarking/). `pairing`, `report` and `plot` have defaults in the
+# script (CONFIG_DEFAULTS); only `datasets` has to name its inputs.
+#
+# Both sides of a dataset are the same chips. The BioNavigator exports ship
+# under exports_BN/, pyKinaXe's exports under exports_pykinaxe/ (the chip
+# folders as a run wrote them), one subfolder per dataset. Relative paths are
+# resolved against this folder first and the repository root second. Several
+# files per array are concatenated (BioNavigator exports PTK as prewash plus
+# afterwash), and an entry may contain a wildcard, which keeps the run
+# timestamp out of this file. The two formats are told apart by their signal
+# column: BioNavigator has "Median_SigmBg" (columns prefixed ds0./ds1./ds2../js0.),
+# pyKinaXe has "I_median" plus image_idx / Xoff / Yoff / Enr_* columns; the
+# "_bn" in pyKinaXe's file name only means "BioNavigator-compatible format".
+datasets:
+
+  rat:
+    title: "CDRL vwr-rats-kinome"
+    output_subdir: "rat"
+    inputs:
+      bn:
+        PTK:
+          - "exports_BN/exports_image_analysis_BN_CDRL_vwr-rats_data_set/Export-image_analysis_PTK_prewash_template-Export.csv"
+          - "exports_BN/exports_image_analysis_BN_CDRL_vwr-rats_data_set/Export-image_analysis_PTK_afterwash_template-Export.csv"
+        STK:
+          - "exports_BN/exports_image_analysis_BN_CDRL_vwr-rats_data_set/Export-image_analysis_STK_template-Export.csv"
+      pykinaxe:
+        # HOW the pyKinaXe (y-axis) spot table is obtained. BioNavigator (x-axis,
+        # `bn` above) is ALWAYS read from files and is never touched by this.
+        #   read_export -> read the shipped *_Export_image_analysis_<ARRAY>_bn.csv
+        #                  under exports_pykinaxe/ (the PTK/STK globs below).
+        #                  Seconds, and the y-axis is the run that wrote them.
+        #   run_engine  -> run pyKinaXe's image-analysis engine LIVE on the raw
+        #                  chip images named under `engine:` and use its
+        #                  final_output_bn, so the y-axis reflects the CURRENT
+        #                  engine. Minutes per chip, and needs data/ present.
+        source: read_export
+        PTK:
+          - "exports_pykinaxe/exports_image_analysis_pykinaxe_CDRL_vwr-rats-kinome_data_set/*/*_Export_image_analysis_PTK_bn.csv"
+        STK:
+          - "exports_pykinaxe/exports_image_analysis_pykinaxe_CDRL_vwr-rats-kinome_data_set/*/*_Export_image_analysis_STK_bn.csv"
+        # run_engine mode only (ignored while source is read_export): the raw
+        # chip runs to analyse, one per array -- the SAME physical chips the
+        # BioNavigator exports above quantify. `data_dir` is the experiment
+        # folder (the parent of the run folder), resolved against the repository
+        # root; `subfolder` is the run folder inside it.
+        engine:
+          PTK:
+            data_dir: "data/CDRL_vwr-rats-kinome_data_set"
+            subfolder: "640091210_640091213_640091214-on 1200PTKlysv05-run 200630103325"
+          STK:
+            data_dir: "data/CDRL_vwr-rats-kinome_data_set"
+            subfolder: "710230318_710230319_710230320-on 1300STKlysv10-run 200220102952"
+
+  benchmarking:
+    title: "benchmarking (HDV)"
+    output_subdir: "benchmarking"
+    inputs:
+      bn:
+        PTK:
+          - "exports_BN/exports_image_analysis_BN_benchmarking_data_set/Export-image_analysis_PTK_prewash_template-Export.csv"
+          - "exports_BN/exports_image_analysis_BN_benchmarking_data_set/Export-image_analysis_PTK_afterwash_template-Export.csv"
+        STK:
+          - "exports_BN/exports_image_analysis_BN_benchmarking_data_set/Export-image_analysis_STK_template-Export.csv"
+      pykinaxe:
+        source: read_export
+        PTK:
+          - "exports_pykinaxe/exports_image_analysis_pyKinaXe_benchmarking_data_set/*/*_Export_image_analysis_PTK_bn.csv"
+        STK:
+          - "exports_pykinaxe/exports_image_analysis_pyKinaXe_benchmarking_data_set/*/*_Export_image_analysis_STK_bn.csv"
+        engine:
+          PTK:
+            data_dir: "data/benchmarking_data_set"
+            subfolder: "641102408_641102409-on 1200PTKlysv04-run 240822144936"
+          STK:
+            data_dir: "data/benchmarking_data_set"
+            subfolder: "710483213_710483216-on 1300STKlysv10-run 240821110734"
+
+# Root output folder; every dataset writes into its own `output_subdir` of it.
+output: "output"
+
+# ---------------------------------------------------------------------------
+# Pairing  (shared by every dataset)
+# ---------------------------------------------------------------------------
+pairing:
+  arrays: ["PTK", "STK"]
+
+  # Columns that identify ONE spot image. Barcode+Row select the array, spotRow
+  # and spotCol the position on it, ID the peptide, and Exposure Time + Cycle the
+  # individual acquisition. All six are required -- pairing on the peptide alone
+  # would average over acquisitions that are not comparable.
+  #
+  # Note the BN exports are not consistent about the order of the spot columns
+  # (prewash writes "ds1.spotRow, ds1.spotCol", afterwash and STK write
+  # "ds2..spotCol, ds2..spotRow"). Pairing is by NAME, so the order is irrelevant
+  # -- but a genuinely transposed grid would show up as a collapse in the matched
+  # spot count, which the script reports.
+  keys: ["Barcode", "Row", "spotRow", "spotCol", "Exposure Time", "Cycle", "ID"]
+
+  # Rows to drop before pairing (reference/control spots, as pyKinaXe's own
+  # filtered final_output_bn does).
+  drop_ids: ["#REF"]
+
+  # Replicate spots that share the full key are averaged rather than dropped.
+  # Set to "first" to take the first occurrence instead.
+  duplicate_handling: "mean"
+
+# ---------------------------------------------------------------------------
+# What to report  (shared by every dataset)
+# ---------------------------------------------------------------------------
+report:
+  # Grid-orientation regression check: pairs on POSITION alone, once as exported
+  # and once with BN's spotRow/spotCol swapped, and compares the correlations.
+  # "as exported" must win, otherwise the exported list is silently wrong off
+  # the grid diagonal and the script exits non-zero -- after every dataset has
+  # been written, so one failure does not hide the other's plots.
+  #
+  # This catches a transposed spot grid (see the orientation note in
+  # associate_layout() of src/kx_image_processor.py), which is invisible to every
+  # other check in the repository, because both exports still label each
+  # position with the same peptide and both still match the manufacturer's
+  # array layout file. Keep this on.
+  check_orientation: true
+
+# ---------------------------------------------------------------------------
+# Agreement plots  (shared by every dataset)
+# output/<dataset>/spot_intensity_agreement_<ARRAY>.png
+# ---------------------------------------------------------------------------
+# ONE FIGURE PER ARRAY AND DATASET, one panel each: BioNavigator on x, pyKinaXe
+# on y, both axes linear and sharing one range, so the identity line is the
+# 45-degree diagonal. PTK and STK are different chips with different ranges,
+# hence separate files. Only spots BOTH sides recorded can be drawn.
+#
+# The figure carries no numbers and no tolerance band -- the agreement
+# statistics are printed to the terminal and recorded in NOTE.txt, so the image
+# shows the spots and nothing that has to be trusted.
+plot:
+  enabled: true
+  filename_pattern: "spot_intensity_agreement_{array}.png"
+  # SIZED FOR A4. 6.3 x 6.3 inch is 160 x 160 mm, the text width of A4 with 25 mm
+  # margins, so the figure is placed at 100% and a point in the file is a point
+  # on the paper -- which is the only way a font size means anything in print.
+  # Square because x and y share one range. 300 dpi is print resolution; at 200
+  # the rasterised points look soft on paper.
+  # If you scale the image in the document, the fonts scale with it: keep the
+  # placement at 100% or raise font_size by the same factor.
+  dpi: 300
+  figsize: [6.3, 6.3]
+
+  # Fraction of the range added as padding on each side.
+  margin: 0.03
+
+  # THE INSET. On a linear axis the few hundred bright spots set the range and
+  # the tens of thousands of dim ones -- where the two tools actually differ --
+  # collapse into the lower left corner. The inset repeats the same panel over a
+  # smaller range, and a rectangle in the main panel marks what it shows.
+  #
+  # zoom_range gives EVERY array AND EVERY DATASET the same window (plus
+  # margin), so the four files can be read against each other: a point at the
+  # same place in two insets means the same numbers. Set it to null to fall back
+  # to zoom_percentile.
+  zoom_range: [-100.0, 150.0]
+
+  # Fallback when zoom_range is null: the upper end is cut at this percentile of
+  # each array's OWN values, so the insets cover the same FRACTION of the spots
+  # but different value ranges. Set both keys to null for no inset.
+  zoom_percentile: 95.0
+
+  # Where the inset sits inside the panel, [left, bottom, width, height] in axes
+  # fractions. The corner is the upper left, which the spots leave empty as long
+  # as the two tools agree at all. The left margin has to clear the inset's own
+  # y tick labels, which sit inside the panel: at font_size 20 they need about
+  # 0.13, below that the labels run into the main y axis.
+  inset_bounds: [0.15, 0.58, 0.38, 0.38]
+
+  # Agreement is called "within tolerance" when the two values differ by less
+  # than this factor, after shifting both by +shift counts so that the noise
+  # floor -- where BN's integer rounding alone can produce any ratio -- does not
+  # dominate the number. These two only affect the PRINTED numbers; nothing is
+  # drawn from them.
+  tolerance_factor: 2.0
+  shift: 10.0
+
+  # Point drawing. 35k spots per array overplot, so keep the markers small and
+  # mostly transparent; the count is what the density shows.
+  point_size: 4.0
+  point_alpha: 0.15
+
+  # Base font size in points IN THE FILE: axis labels font_size, title +1, main
+  # tick labels -1, the inset's ticks -5. The identity line and the grid scale
+  # with it, so the figure keeps its proportions at any size.
+  #
+  # SET FOR TWO PLOTS SIDE BY SIDE ON A4. The figure is 160 mm wide (figsize
+  # above), two of them fit the 160 mm text width only at 50%, and type scales
+  # with the image: what ends up on the paper is HALF of what is set here. At 20
+  # that is 10 pt labels, 11 pt title, 9.5 pt ticks and 7.5 pt in the inset,
+  # i.e. body-text size for the labels and the usual 8 pt floor for the
+  # smallest element.
+  #
+  # So pick it from the placement, not from the file: 20 for two side by side,
+  # 11 for one figure placed alone at 100%.
+  font_size: 20.0

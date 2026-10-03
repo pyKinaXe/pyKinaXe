@@ -1,0 +1,68 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  lint:
+    # Linting needs no scientific stack, so it runs on a bare interpreter and
+    # gives fast feedback even when the heavy install below is slow or broken.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: pip install ruff
+      - run: ruff check .
+
+  packaging:
+    # Guards the failure mode that a plain import test cannot see: a module that
+    # exists in the checkout but is missing from pyproject's py-modules list is
+    # silently absent from an installed copy, and kx_pipeline_tools imports the
+    # family analysis inside a try/except that turns that into a log line.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: pip install build
+      - run: python -m build --wheel
+      - name: Every src/ module must be in the wheel
+        run: |
+          python - <<'PY'
+          import glob, pathlib, sys, zipfile
+          wheel = glob.glob("dist/*.whl")[0]
+          shipped = {
+              n for n in zipfile.ZipFile(wheel).namelist()
+              if n.endswith(".py") and "/" not in n
+          }
+          on_disk = {p.name for p in pathlib.Path("src").glob("kx_*.py")}
+          missing = sorted(on_disk - shipped)
+          if missing:
+              sys.exit(
+                  "Missing from the wheel -- add them to pyproject.toml "
+                  f"[tool.setuptools] py-modules: {missing}"
+              )
+          print(f"{len(on_disk)} modules shipped")
+          PY
+
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install
+        # inmoose ships as a source distribution and needs a C++ toolchain, so
+        # install the runtime deps rather than the package itself; the unit tests
+        # import from src/ directly.
+        run: |
+          pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install pytest
+      - run: pytest -v

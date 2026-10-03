@@ -1,0 +1,7 @@
+Source Data Path:
+data/CDRL_vwr-rats-kinome_data_set_corrected/640091210_640091213_640091214-on 1200PTKlysv05-run 200630103325
+
+Experiment Name: CDRL_vwr-rats-kinome_data_set_corrected
+Subfolder Name: 640091210_640091213_640091214-on 1200PTKlysv05-run 200630103325
+Peptides Type: PTK
+Analysis Timestamp: 20260925154717

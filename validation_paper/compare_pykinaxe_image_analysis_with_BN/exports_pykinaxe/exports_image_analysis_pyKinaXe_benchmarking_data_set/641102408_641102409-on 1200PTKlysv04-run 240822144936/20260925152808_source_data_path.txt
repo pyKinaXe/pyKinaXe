@@ -1,0 +1,7 @@
+Source Data Path:
+data/benchmarking_data_set/641102408_641102409-on 1200PTKlysv04-run 240822144936
+
+Experiment Name: benchmarking_data_set
+Subfolder Name: 641102408_641102409-on 1200PTKlysv04-run 240822144936
+Peptides Type: PTK
+Analysis Timestamp: 20260925152808

@@ -1,0 +1,24 @@
+pamgeneAnalyzeR + KRSA on raw PamChip TIFFs -- runtime
+=====================================================
+written : 2026-09-13 16:20:55
+machine : aarch64-apple-darwin24.4.0, R 4.5.2
+registration: 9 (registerAllImages()'s own default, detectCores() - 1)
+packages: pamgeneAnalyzeR 0.1.0, KRSA 1.99.354
+
+Wall clock is what you waited for. Stage 1 is parallel over the cores
+above; stage 2 (krsa() sampling) is single-threaded. The CPU column is
+this R process only and so understates stage 1 whenever cores > 1.
+
+dataset                  array  stage                            wall (s)      cpu (s)   images
+----------------------------------------------------------------------------------------------
+benchmarking             STK    pamgeneAnalyzeR                     127.7          0.6      208
+----------------------------------------------------------------------------------------------
+benchmarking             ALL    pamgeneAnalyzeR (dataset)           127.7          0.6      208
+benchmarking             ALL    KRSA (dataset)                        0.0          0.0        -
+benchmarking             ALL    TOTAL (dataset)                     127.8          0.6      208
+
+PER-DATASET TOTALS
+----------------------------------------------------------------------------------------------
+  benchmarking            stage 1   127.7s (2:08)   stage 2     0.0s   TOTAL   127.8s (2:08)   (208 images)
+  ALL DATASETS              127.8s (2:08)
+

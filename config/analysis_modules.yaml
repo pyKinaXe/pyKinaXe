@@ -1,0 +1,74 @@
+peptide_analysis:
+  path_file_enrichment_peptides: data/external/PamGene/enrichment_peptides.csv
+  peptide_row_name: UniprotAccession
+  # Validation whitelists. The ACTIVE values (default_log2_slope_mode,
+  # default_batch_correction, default_batch_correction_method,
+  # default_array_normalization, default_array_normalization_method,
+  # default_qc_mode, batch_column) live in pipeline_defaults.yaml ->
+  # default_peptide_statistics_params, which is the single source of truth;
+  # config/analysis_modules.py re-exports them.
+  allowed_contrast_modes:
+    - all_pairs
+    - single_control
+  allowed_qc_modes:
+    - QC_KRSA
+    - QC_BioNavigator
+  allowed_log2_slope_modes:
+    - pamgene_zero
+    - epsilon_floor
+    - krsa_na
+  allowed_batch_correction_methods:
+    - limma_block
+    - center
+  allowed_array_normalization_methods:
+    - median
+  # Hard floor: the fewest peptides measured on every array of a type that a
+  # median normalisation is estimated from. Below it that array type is left
+  # unnormalised, with a warning and a 'skipped' row in the offsets log.
+  array_normalization_min_peptides: 20
+
+pathway_enrichment_analysis:
+  default_significance_level_pathways: 0.05
+  default_uka_visualization_metric: kinase_change
+  # g:GOSt REST endpoint. The endpoint of an archived release, e.g.
+  # https://biit.cs.ut.ee/gprofiler_archive3/e111_eg58_p18/api/gost/profile/,
+  # pins the annotation database of a run.
+  gprofiler_profile_url: https://biit.cs.ut.ee/gprofiler/api/gost/profile/
+  # Validation whitelist. The ACTIVE value (pathway_background) lives in
+  # pipeline_defaults.yaml -> default_pathway_enrichment_params.
+  allowed_pathway_backgrounds:
+    - annotated
+    - mappable_kinases
+  uka_metric_options:
+    kinase_change:
+      column: KinaseChange
+      label: Kinase Change
+    kinase_statistic:
+      column: KinaseStatistic
+      label: Kinase Statistic
+
+upstream_kinase_analysis:
+  default_blast_results_relative_path: external/BLAST/blast_results_uniprot.csv
+  uniprot_name_lookup_url: https://rest.uniprot.org/uniprotkb/search
+  path_file_enrichment_peptides: data/external/PamGene/enrichment_peptides.csv
+  input_stk_ptm_path: data/external/processed/PTM_Data_OmniPath/stk_interactions.csv
+  input_ptk_ptm_path: data/external/processed/PTM_Data_OmniPath/ptk_interactions.csv
+  candidate_data_paths:
+    - ./data
+    - ../data
+    - ../../data
+    - ~/data
+  # Validation whitelists. The ACTIVE KPEA values (lfc cutoffs, cutoff mode,
+  # substrate cutoff, z-score threshold, z cap, background universe, verified
+  # evidence levels) live in pipeline_defaults.yaml
+  # -> default_kinase_analysis_params, which is the single source of truth;
+  # config/analysis_modules.py re-exports them under their default_* names.
+  # Population the hypergeometric null draws from:
+  #   chip     = every peptide printed on the array (KRSA's convention; default)
+  #   measured = only measured, mapped, QC-passed peptides
+  allowed_kpea_background_universes:
+    - chip
+    - measured
+  allowed_kpea_cutoff_modes:
+    - average
+    - primary

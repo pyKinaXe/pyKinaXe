@@ -1,0 +1,41 @@
+KRSA on pyKinaXe image analysis -- run manifest
+==============================================
+written           : 2026-09-12 00:46:35
+script            : validation_paper/compare_pyKinaXe_results_with_KRSA/results_KRSA/run_KRSA_on_pykinaxe_image_analysis/run_krsa_on_pykinaxe_image_analysis.R
+dataset           : benchmarking
+input folder      : validation_paper/compare_pyKinaXe_results_with_KRSA/results_KRSA/run_KRSA_on_pykinaxe_image_analysis/exports_pykinaxe/exports_image_analysis_pyKinaXe_benchmarking_data_set
+output folder     : validation_paper/compare_pyKinaXe_results_with_KRSA/results_KRSA/results_benchmarking_data_set
+
+KRSA version      : 1.99.354  (https://github.com/CogDisResLab/KRSA)
+R version         : R version 4.5.2 (2025-10-31)
+
+thresholds and settings (change one side only at your peril -- the family
+comparison assumes pyKinaXe used the same):
+  signal_threshold: 5
+  r2_threshold    : 0.9
+  lfc_cutoffs     : 0.2, 0.3, 0.4
+  z_hit_threshold : 2
+  iterations      : 2000
+  seed            : 123
+  figures         : yes
+
+[PTK]
+  spot export     : 20260911203925_Export_image_analysis_PTK_bn.csv
+  sample annotation: 20260911203925_data_enrichment.txt
+  mapping table   : KRSA_Mapping_PTK_PamChip_86402_v1
+  coverage table  : KRSA_coverage_PTK_PamChip_86402_v1
+  peptides passing global QC: 158 of 196
+  pLHDAg_vs_mock               QC peptides 160  hit peptides 76   kinase hits 0    ok
+  pSHDAg_vs_mock               QC peptides 164  hit peptides 85   kinase hits 1    (SRC)
+  pSVLD3_vs_mock               QC peptides 161  hit peptides 116  kinase hits 0    ok
+
+[STK]
+  spot export     : 20260911203925_Export_image_analysis_STK_bn.csv
+  sample annotation: 20260911203925_data_enrichment.txt
+  mapping table   : KRSA_Mapping_STK_PamChip_87102_v1
+  coverage table  : KRSA_coverage_STK_PamChip_87102_v2
+  peptides passing global QC: 108 of 144
+  pLHDAg_vs_mock               QC peptides 109  hit peptides 88   kinase hits 11   (ERK, RSK, JNK, PKA, DYRK, DMPK, CDK, P38, RAD53, AMPK, PAKA)
+  pSHDAg_vs_mock               QC peptides 108  hit peptides 42   kinase hits 8    (JNK, STE7, ERK, PLK, P38, CDK, PKA, CK1)
+  pSVLD3_vs_mock               QC peptides 108  hit peptides 83   kinase hits 9    (ERK, JNK, PLK, P38, PKA, DYRK, RSK, AMPK, PKG)
+

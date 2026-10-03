@@ -1,0 +1,5 @@
+# One figure per swept step, a few MB each, regenerated from
+# data/ in a single command. Nothing in here is worth versioning.
+rotation/output/
+translation/output/
+__pycache__/

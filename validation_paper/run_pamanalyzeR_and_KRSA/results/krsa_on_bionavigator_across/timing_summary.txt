@@ -1,0 +1,45 @@
+KRSA on BioNavigator image analysis -- runtime
+=============================================
+written : 2026-09-13 17:42:44
+machine : aarch64-apple-darwin24.4.0, R 4.5.2
+KRSA    : 1.99.354  (https://github.com/CogDisResLab/KRSA)
+dataset : benchmarking
+input   : BioNavigator export -- KRSA's native input, so the
+          saturation filter runs at KRSA's own default and no signal
+          rescaling is needed.
+
+krsa scope        : across
+saturation filter : ON (KRSA default)
+signal_threshold  : 5
+r2_threshold      : 0.9
+lfc_cutoffs       : 0.2, 0.3, 0.4
+z_hit_threshold   : 2
+iterations        : 2000
+seed              : 123
+
+KRSA is single-threaded: krsa() samples in a serial loop, and the runtime
+is (number of krsa() calls) x (cost of one call). Quote the scope with the
+number.
+
+array  stage                          krsa()     wall (s)      cpu (s)
+------------------------------------------------------------------------
+PTK    KRSA (BioNavigator input)           9         23.0         23.0
+STK    KRSA (BioNavigator input)           9         30.2         30.2
+ALL    KRSA (dataset)                     18         53.2         53.2
+
+TOTAL     53.2s  over 18 krsa() call(s)  -> 2.96 s per call
+
+[PTK]  input Export-image_analysis_PTK_afterwash_template-Export.csv
+   mapping KRSA_Mapping_PTK_PamChip_86402_v1 / coverage KRSA_coverage_PTK_PamChip_86402_v1
+   peptides passing global QC: 132 of 197
+   pLHDAg_vs_mock               QC 133  hits 68   kinases 0   ok
+   pSHDAg_vs_mock               QC 133  hits 70   kinases 0   ok
+   pSVLD3_vs_mock               QC 135  hits 103  kinases 0   ok
+
+[STK]  input Export-image_analysis_STK_template-Export.csv
+   mapping KRSA_Mapping_STK_PamChip_87102_v1 / coverage KRSA_coverage_STK_PamChip_87102_v2
+   peptides passing global QC: 100 of 145
+   pLHDAg_vs_mock               QC 101  hits 83   kinases 16  (STE7, ERK, CDK, PLK, JNK, NMO, P38, PKA, DMPK, CK1, IRAK, PKG, PDK1, COT, RSK, MSN)
+   pSHDAg_vs_mock               QC 101  hits 42   kinases 4   (COT, CDK, PEK, VRK1)
+   pSVLD3_vs_mock               QC 101  hits 80   kinases 14  (JNK, DMPK, P38, RSK, ERK, PKA, PLK, PDK1, PIM, STE7, NMO, CDK, PKG, COT)
+

@@ -1,0 +1,28 @@
+Kinase-family comparison: pyKinaXe against KRSA
+===============================================
+
+Compares the kinase-family Z-scores of pyKinaXe with those of KRSA on the rat
+and the benchmarking dataset. Both sides start from pyKinaXe's image analysis.
+
+Run (from the repository root):
+
+    python validation_paper/compare_pyKinaXe_results_with_KRSA/compare_pykinaxe_krsa.py
+    python validation_paper/compare_pyKinaXe_results_with_KRSA/compare_pykinaxe_krsa.py --datasets rat
+
+Input:
+    results_pykinaxe/   pyKinaXe family tables
+                        (results/<dataset>/<timestamp>_downstream_analysis/results_kinase_families/)
+    results_KRSA/       KRSA results, produced from the pyKinaXe image-analysis
+                        exports in results_KRSA/run_KRSA_on_pykinaxe_image_analysis/exports_pykinaxe/
+
+Output:
+    output/<dataset>/   family_z_comparison.csv, overlap_summary.csv, waterfall plots
+
+To regenerate the KRSA side (needs R; KRSA is installed if missing):
+
+    python validation_paper/compare_pyKinaXe_results_with_KRSA/results_KRSA/run_KRSA_on_pykinaxe_input.py
+
+To regenerate the pyKinaXe side, run the pipeline
+(python scripts/kx_kinase_extraction_pipeline.py) with the default config and
+copy the family tables and the chip folders of that run into the two input
+folders above, replacing the old ones.

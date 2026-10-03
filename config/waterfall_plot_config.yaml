@@ -1,0 +1,64 @@
+# Style defaults for the peptide waterfall plots.
+#
+# A waterfall plot ranks every peptide by its log2 fold change (peptide_change)
+# and draws one horizontal stem per peptide, so the whole distribution reads
+# top-to-bottom from the strongest increase to the strongest decrease.
+#
+# The log2 fold change cutoffs themselves are NOT configured here: they are the
+# KPEA cutoffs from config/pipeline_defaults.yaml
+# (default_kinase_analysis_params -> kpea_lfc_cutoffs / kpea_cutoff_mode /
+# kpea_primary_lfc_cutoff), so plot and enrichment always use the same
+# thresholds. This file only controls how they look.
+
+# The plot carries no legend: red = up, blue = down, black = not significant,
+# and the dashed verticals are the cutoffs, readable off the x axis.
+marker:
+  size_significant: 18
+  size_not_significant: 12
+  alpha_significant: 0.9
+  alpha_not_significant: 0.6
+  color_up: "red"
+  color_down: "blue"
+  color_not_significant: "black"
+
+stem:
+  color: "gray"
+  linewidth: 0.8
+  alpha_significant: 0.9
+  alpha_not_significant: 0.45
+
+threshold_lines:
+  # The significance boundary (the smallest configured cutoff) is drawn with the
+  # primary style; any further cutoff gets the secondary style so the boundary
+  # stays the dominant line.
+  cutoff_color: "black"
+  cutoff_linestyle: "--"
+  cutoff_linewidth: 1.4
+  secondary_cutoff_color: "black"
+  secondary_cutoff_linestyle: "--"
+  secondary_cutoff_linewidth: 0.9
+  secondary_cutoff_alpha: 0.55
+  center_color: "black"
+  center_linestyle: "-"
+  center_linewidth: 0.9
+
+axes:
+  label_fontsize: 12
+  title_fontsize: 14
+  grid_alpha: 0.25
+  x_tick_fontsize: 10
+  y_tick_fontsize: 5
+
+plot:
+  figsize_width: 7.0
+  # Vertical space reserved per peptide row, plus the fixed margins around the
+  # axes. The resulting height is clamped into [min_height, max_height].
+  row_height: 0.1
+  min_height: 4.0
+  max_height: 45.0
+  margin_left: 1.9
+  margin_right: 0.6
+  margin_top: 0.7
+  margin_bottom: 0.7
+  dpi: 300
+  image_format: "png"

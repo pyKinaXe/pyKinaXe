@@ -1,0 +1,31 @@
+pamgeneAnalyzeR + KRSA on raw PamChip TIFFs -- runtime
+=====================================================
+written : 2026-09-13 14:11:02
+machine : aarch64-apple-darwin24.4.0, R 4.5.2, 9 registration core(s)
+packages: pamgeneAnalyzeR 0.1.0, KRSA 1.99.354
+
+Wall clock is what you waited for. Stage 1 is parallel over the cores
+above; stage 2 (krsa() sampling) is single-threaded. The CPU column is
+this R process only and so understates stage 1 whenever cores > 1.
+
+dataset                  array  stage                            wall (s)      cpu (s)   images
+----------------------------------------------------------------------------------------------
+CDRL_vwr-rats-kinome     STK    pamgeneAnalyzeR                     233.5          0.8      286
+CDRL_vwr-rats-kinome     STK    KRSA                                150.4        150.2        -
+----------------------------------------------------------------------------------------------
+CDRL_vwr-rats-kinome     ALL    pamgeneAnalyzeR (dataset)           233.5          0.8      286
+CDRL_vwr-rats-kinome     ALL    KRSA (dataset)                      150.4        150.2        -
+CDRL_vwr-rats-kinome     ALL    TOTAL (dataset)                     384.1        151.0      286
+benchmarking             STK    pamgeneAnalyzeR                     174.3          0.6      208
+benchmarking             STK    KRSA                                 99.6         99.6        -
+----------------------------------------------------------------------------------------------
+benchmarking             ALL    pamgeneAnalyzeR (dataset)           174.3          0.6      208
+benchmarking             ALL    KRSA (dataset)                       99.6         99.6        -
+benchmarking             ALL    TOTAL (dataset)                     273.9        100.1      208
+
+PER-DATASET TOTALS
+----------------------------------------------------------------------------------------------
+  CDRL_vwr-rats-kinome    stage 1   233.5s (3:54)   stage 2   150.4s (2:30)   TOTAL   384.1s (6:24)   (286 images)
+  benchmarking            stage 1   174.3s (2:54)   stage 2    99.6s (1:40)   TOTAL   273.9s (4:34)   (208 images)
+  ALL DATASETS              657.9s (10:58)
+

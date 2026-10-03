@@ -1,0 +1,100 @@
+# Configuration for rotation/rotation_sweep.py
+#
+# LOCAL to this test: not read by the pipeline, does not shadow anything in the
+# repository-level config/ folder, and changes nothing about how pyKinaXe
+# computes results -- only which frame is used and how far it is rotated.
+#
+# Every key has a documented default in the script (DEFAULTS) or in
+# ../robustness_common.py (COMMON_DEFAULTS), so a partial file is valid.
+# ../translation/config_translation.yaml is the same file for the other half of
+# the test; keep the shared keys in step so the two runs stay comparable.
+
+rotation_sweep:
+  # The folder to take the frame from. Searched recursively for ImageResults
+  # directories, so this may be one run folder, one ImageResults folder, or a
+  # whole experiment tree.
+  source: "data/CDRL_vwr-rats-kinome_data_set"
+
+  # Which frame the sweep runs on.
+  #   image: <name>     exactly that file
+  #   mode: brightest   one random ARRAY (per seed), then its BRIGHTEST frame.
+  #                     Not any random frame: a 10 ms first-kinetic frame would
+  #                     add "the signal was marginal anyway" as a second
+  #                     explanation for every failure, and this test is about
+  #                     the ANGLE.
+  #   mode: exposures   the same array and cycle at every configured exposure,
+  #                     one sweep each. Use it to check that the window really
+  #                     is signal-independent.
+  frames:
+    image: null
+    mode: brightest
+  seed: 0
+
+  # Restrict the pool before choosing; null means "no filter". The exposure
+  # filter defaults to the three the pipeline consumes
+  # (config/image_processor.yaml -> filtering.ptk_filter_exposure_times).
+  cycles: null
+  exposures: [10, 50, 200]
+
+  # ---------------------------------------------------------------------
+  # THE SWEEP
+  # ---------------------------------------------------------------------
+  # -2 to +2 brackets the boundary comfortably on both sides. The tolerated
+  # window is 2*asin(10 px / 408.5 px) = 2.80 deg WIDE and sits at about
+  # [-1.05, +1.75] deg -- off-centre, because the check compares against a
+  # nominal T->J vertical offset of 21.5 px while the chips carry 19-21 px.
+  # 0.1 deg resolves both edges to a tenth of a degree; drop to 0.05 to pin them
+  # harder, at twice the run time and twice the panels.
+  from_deg: -2.0
+  to_deg: 2.0
+  step_deg: 0.1
+
+  # ---------------------------------------------------------------------
+  # Output
+  # ---------------------------------------------------------------------
+  output_dir: "output"
+
+  # ONE panel per figure -- the original once, then one per angle -- and no
+  # other file output. They are built at a fixed PRINT width (94.5 mm, so two of
+  # them fit side by side on A4; see robustness_common.py) so panel_dpi decides
+  # how many pixels that width carries: 300 is print quality, below it the
+  # markings soften. 42 panels plus the legend are about 85 MB;
+  # --no-panels reports to the terminal and writes nothing.
+  panels: true
+
+  # The legend is ALWAYS written once as its own figure, legend.png, cropped to
+  # its content: ONE COLUMN of four entries, 41 x 19 mm, meant to stand BESIDE
+  # the panels rather than under them (two panels already fill 189 mm of the
+  # 190 mm text width). This decides only whether the legend is ALSO repeated
+  # under every panel, where it stays in two rows of two. Set it to false for a
+  # page that carries the column once; the panels then lose their legend strip
+  # and get 9.5 mm shorter.
+  panel_legend: true
+
+  panel_dpi: 300
+  dpi: 150
+
+  # Pixels that must stay free at every frame edge around the content box (one
+  # spot pitch). An angle that would come closer is reported as NOT TESTABLE and
+  # left out of the report -- it is not a detection failure, and counting it as
+  # one would blame the detector for the test's own limit.
+  clearance_px: 21.5
+
+  # Spline order for the resampling a rotation needs. The result is clipped back
+  # into the frame's own value range, because a cubic spline overshoots at the
+  # hard black edge the rotation creates and the aperture detector must not be
+  # handed that rim as if it were signal.
+  spline_order: 3
+
+  # Radius of the lime spot circles. NOT a drawing choice: this is the aperture
+  # the pipeline integrates over (config/image_processor.yaml ->
+  # spot_intensity.integration_radius), so a circle that misses its spot in the
+  # picture is a wrong number in the export.
+  integration_radius: 5.0
+
+  # How the content box -- peptide grid AND reference spots -- is measured. The
+  # yardstick every step is checked against, not the detector under test.
+  content_box:
+    smooth_sigma: 5.0
+    spot_rel_threshold: 0.15
+    spot_min_area: 12

@@ -1,0 +1,22 @@
+pamgeneAnalyzeR and KRSA on the raw PamChip images, timed
+=========================================================
+
+Measures the runtime of the R tools pamgeneAnalyzeR (image analysis) and KRSA
+(kinase analysis) on the data pyKinaXe reads.
+
+Run (from this folder; missing R packages are installed):
+
+    cd validation_paper/run_pamanalyzeR_and_KRSA
+    Rscript run_pamanalyzeR_and_KRSA.R --unmodified --datasets benchmarking --output-dir output_unmodified
+    Rscript run_krsa_on_bionavigator.R --output-dir output_krsa_on_bn
+    Rscript run_krsa_on_bionavigator.R --krsa-scope across --output-dir output_krsa_on_bn_across
+
+Optional, pamgeneAnalyzeR chained into KRSA:
+
+    Rscript run_pamanalyzeR_and_KRSA.R
+
+--help on either script lists all options.
+
+Output: timing_summary.txt and timing.csv in the output folder (excluded from
+git). The curated runs are kept in results/. run_krsa_on_bionavigator.R
+without --output-dir overwrites results/krsa_on_bionavigator/.

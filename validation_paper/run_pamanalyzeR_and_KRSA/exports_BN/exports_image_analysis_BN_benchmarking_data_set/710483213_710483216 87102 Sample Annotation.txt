@@ -1,0 +1,9 @@
+PamChip Location	Barcode	Row	Col	Array	Visual QC	PI PamGene	Operator	Project	Article number	Strip	ATP	Detection	Sample name	Sample type	Sample batch	Sample concentration	Lysis buffer in assay	Protein amount	Protein concentration sample	Assay volume	Compound(on Chip)	Compound concentration	Technical replicate	WL protocol	Tissue type	Tissue status
+1	710483213	1	1	A1	OK	NA	NA	NA	87102	1	Na	Na	pSHDAg 2.1	Na	Na	0	0	0	0	40	Na	0	0	Na	Na	Na	
+1	710483213	2	1	A2	OK	NA	NA	NA	87102	1	Na	Na	pLHDAg 2.1	Na	Na	0	0	0	0	40	Na	0	0	Na	Na	Na	
+1	710483213	3	1	A3	OK	NA	NA	NA	87102	1	Na	Na	pSVLD3 2.1	Na	Na	0	0	0	0	40	Na	0	0	Na	Na	Na	
+1	710483213	4	1	A4	OK	NA	NA	NA	87102	1	Na	Na	mock 2.1	Na	Na	0	0	0	0	40	Na	0	0	Na	Na	Na	
+3	710483216	1	1	A1	OK	NA	NA	NA	87102	3	Na	Na	mock 2.2	Na	Na	0	0	0	0	40	Na	0	0	Na	Na	Na	
+3	710483216	2	1	A2	OK	NA	NA	NA	87102	3	Na	Na	pSVLD3 2.2	Na	Na	0	0	0	0	40	Na	0	0	Na	Na	Na	
+3	710483216	3	1	A3	OK	NA	NA	NA	87102	3	Na	Na	pLHDAg 2.2	Na	Na	0	0	0	0	40	Na	0	0	Na	Na	Na	
+3	710483216	4	1	A4	OK	NA	NA	NA	87102	3	Na	Na	pSHDAg 2.2	Na	Na	0	0	0	0	40	Na	0	0	Na	Na	Na	

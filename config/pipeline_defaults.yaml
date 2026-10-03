@@ -1,0 +1,240 @@
+default_peptide_statistics_params:
+  path_file_enrichment_peptides: data/external/PamGene/enrichment_peptides.csv
+  path_output_peptide_statistic: null
+  # Run the limma moderated t-test. Its columns (p_value, t_statistic,
+  # logp_value, s2_moderated, df_moderated, *_zscore) are exported but not read
+  # by any downstream stage; false falls back to row-wise t-tests and leaves the
+  # kinase, family and pathway results unchanged.
+  use_limma: true
+  # The values below are the pipeline defaults and the PeptideStatistics class
+  # defaults (re-exported by config/analysis_modules.py).
+  #
+  # log2_slope_mode: how a weak reaction slope becomes slope_log2.
+  #   epsilon_floor = log2(max(slope, 0.01)); a weak slope stays negative (to -6.64)
+  #   pamgene_zero  = log2(slope) if slope>1 else 0; sub-baseline clipped to 0
+  #                   (PamGene convention)
+  #   krsa_na       = log2(slope) if slope>=1 else NaN; sub-baseline dropped,
+  #                   matching KRSA (NaN peptides fall out of the group means and
+  #                   of the limma complete-case rows)
+  log2_slope_mode: krsa_na
+  # Per-chip (Barcode) batch correction of the peptide log2 fold change: the
+  # additive chip offset is regressed out before the treatment-vs-control
+  # difference is formed, mirroring KRSA's within-chip pairing
+  # (krsa_group_diff(byChip=TRUE)). Falls back to the uncorrected difference
+  # when the batch factor is not estimable (single chip, missing Barcode, or
+  # Barcode confounded with the condition). limma_block also adds the batch
+  # factor to the limma design, center does not; peptide_change is the same in
+  # both modes.
+  batch_correction: true
+  batch_correction_method: limma_block
+  batch_column: Barcode
+  # Per-array normalisation of log2(slope). An array is one well, i.e. one
+  # sample. Applied before the batch correction and before the
+  # treatment-vs-control difference is formed. It removes array-wide
+  # intensity differences (protein input, well) that the per-chip batch
+  # correction cannot see, because they act within a chip, and assumes that
+  # most peptides do not change between the conditions. Estimated ONCE per run
+  # after the run-wide QC, so a shared control array gets the same offset in
+  # every comparison. The offsets are written to
+  # logs/array_normalization_offsets.csv.
+  #   true  = normalise with array_normalization_method
+  #   false = no normalisation (DEFAULT). KRSA does not normalise, and the
+  #           published results were computed without it; false reproduces
+  #           either.
+  array_normalization: false
+  # How the arrays are normalised:
+  #   median = every array is shifted so that its median log2(slope) over the
+  #            analysed peptides measured on ALL arrays of its type equals the
+  #            median of those array medians.
+  array_normalization_method: median
+  # qc_mode selects the peptide QC that filters the peptide set:
+  #   QC_KRSA         = KRSA's krsa_quick_filter reproduced: signal at the longest
+  #                     exposure >= qc_krsa_signal_threshold, R^2 of the linear
+  #                     signal-vs-exposure fit >= qc_krsa_r2_threshold (worst chip
+  #                     decides), reference/artificial control spots removed. All
+  #                     three at the end-point cycle. DEFAULT, so the peptide set
+  #                     is comparable to KRSA's.
+  #   QC_BioNavigator = the two array-specific filters pyKinaXe used before
+  #                     QC_KRSA was added: STK thresholds every peptide against
+  #                     the mean slope of the pre-phosphorylated internal
+  #                     standards, PTK regresses slope against cycle over cycles
+  #                     32-92. Both require the criterion to hold on >= 2 chips.
+  #                     The filters are pyKinaXe's own; the name records the mode.
+  # The two thresholds below apply to QC_KRSA only.
+  # contrast_mode: which condition pairs are compared.
+  #
+  # A Test Condition IS the sample name: the sample name minus a leading c/t
+  # prefix and minus the trailing replicate numbers, so 't2_Exer_HPC_1_2' is
+  # condition 'Exer_HPC' and 't1_pSHDAg' is condition 'pSHDAg'. Samples are
+  # matched BY THAT NAME across wells, chips and both arrays; the c/t prefix
+  # supplies the control/test role (kx_data_enricher). The annotation file, not
+  # this setting, decides what is a control and what is a test.
+  #
+  #   all_pairs      = every control against every test (DEFAULT). With k_c
+  #                    controls and k_t tests that is k_c * k_t comparisons.
+  #                    Control-vs-control and test-vs-test are NOT produced --
+  #                    a comparison always has a control on the reference side.
+  #                    With a single control this is IDENTICAL to
+  #                    single_control, down to the file names.
+  #   single_control = one reference only: the first control found, with every
+  #                    other condition treated as a test -- a second control
+  #                    included, which then shows up as a control-vs-control
+  #                    comparison. Kept for reproducing earlier runs.
+  contrast_mode: all_pairs
+  # contrasts: optional explicit comparison list; overrides contrast_mode.
+  #
+  # contrast_mode knows only the control/test ROLE of a label, never a BLOCK
+  # (tissue, subject, chip batch), so 'all_pairs' also produces pairs that cross
+  # such a block, e.g. HPC_CTL vs STR_Exer in the CDRL_vwr-rats-kinome design,
+  # which compares hippocampus against striatum and therefore measures tissue
+  # identity, not the treatment effect. No column carries the block: the
+  # annotation's 'Supergroup' is constant ('Sgroup1') in that dataset and the
+  # tissue lives only in the label prefix, i.e. in a naming convention.
+  # Listing the wanted comparisons here is the only way to state a pairing
+  # criterion.
+  #
+  #   null                    = keep contrast_mode (default, behaviour unchanged)
+  #   [[ctrl_a, test_a], ...] = run exactly these (reference, test) pairs
+  #
+  # Every name must be a Test Condition of the annotation and every reference
+  # must be a control condition, otherwise the run aborts. Example:
+  #   contrasts: [[HPC_CTL, HPC_Exer], [STR_CTL, STR_Exer]]
+  contrasts: null
+  qc_mode: QC_KRSA
+  qc_krsa_signal_threshold: 5
+  qc_krsa_r2_threshold: 0.9
+  # Ranked log2 fold change plot of every peptide. The cutoff lines and the
+  # significance boundary are the KPEA cutoffs below
+  # (kpea_lfc_cutoffs / kpea_cutoff_mode / kpea_primary_lfc_cutoff), so plot and
+  # enrichment never disagree about which peptides count.
+  peptide_waterfall_plot: true
+  peptide_waterfall_plot_output: null
+  peptide_heatmap_plot: true
+  peptide_heatmap_plot_output: null
+
+default_kinase_analysis_params:
+  BLAST_threshold: 80
+  input_stk_ptm_path: data/external/processed/PTM_Data_OmniPath/stk_interactions.csv
+  input_ptk_ptm_path: data/external/processed/PTM_Data_OmniPath/ptk_interactions.csv
+  use_verified_interactions_only: false
+  verified_evidence_levels:
+    - curated_literature
+    - curated_source
+    - literature_supported
+  verified_min_score: null
+  verified_min_references: null
+  require_known_ptm_site: true
+  debugging_print: false
+  # The KPEA values below (and verified_evidence_levels above) are the pipeline
+  # defaults and the KinaseActivityAnalysis class defaults, re-exported by
+  # config/analysis_modules.py. The kinase-family analysis carries its own
+  # values in config/upstream_kinase_families_analysis.yaml.
+  kpea_lfc_cutoffs:
+    - 0.2
+    - 0.3
+    - 0.4
+  kpea_cutoff_mode: average
+  kpea_primary_lfc_cutoff: 0.2
+  kpea_substrate_cutoff: 2
+  # Single-kinase threshold. Lower than the family threshold (2.0,
+  # KRSA's own hit convention) because a single kinase carries fewer substrates
+  # than a family and its z therefore has less resolution.
+  kpea_zscore_threshold: 1.3
+  kpea_z_cap: 10.0
+  # Population the hypergeometric null draws from; 'chip' matches KRSA.
+  kpea_background_universe: chip
+  # PamChip VERSION whose printed peptides form that population, e.g.
+  #   kpea_chip_numbers: {PTK: '86412', STK: '87102'}
+  # enrichment_peptides.csv is the pooled PamGene catalogue over several chip
+  # generations (column chip_num), so without a version the null population is
+  # their union -- 181 instead of 144 STK peptides on the benchmarking run.
+  # null (default) infers the version from the measured peptides; pin it here
+  # when the array-layout file name is the authority
+  # (KinaseActivityAnalysis.chip_number_from_layout_path).
+  kpea_chip_numbers: null
+
+default_pathway_enrichment_params:
+  significance_level_pathways: 0.05
+  # Statistical domain of the g:Profiler enrichment. The query is always the
+  # gene symbols of the significant kinases (UniProt primary gene names of the
+  # release in config/data_enricher.yaml): g:Profiler silently drops every
+  # UniProt accession that Ensembl links to more than one gene.
+  #   annotated        = every gene with at least one annotation in the pathway
+  #                      source (g:Profiler domain_scope 'annotated', no
+  #                      background list). DEFAULT
+  #   mappable_kinases = only the kinases the PTM data maps to at least
+  #                      kpea_substrate_cutoff peptides printed on the run's chip
+  #                      versions, i.e. every kinase the analysis could have
+  #                      called (domain_scope 'custom_annotated', so of those only
+  #                      the ones annotated in the source). The list is written to
+  #                      results_pathways/pathway_background_kinases.csv.
+  pathway_background: annotated
+  # Kinase metric coloured in the pathway heatmap: kinase_change or
+  # kinase_statistic.
+  uka_visualization_metric: kinase_change
+  pathway_heatmap_plot: true
+  pathway_heatmap_plot_output: null
+
+default_venn_plot_params:
+  venn_plot: true
+  # Kinase overlaps land in results_individual_kinases/plots, pathway overlaps in
+  # results_pathways/plots. null => those defaults.
+  kinase_venn_plot_output: null
+  pathway_venn_plot_output: null
+  venn_plot_tables: true
+
+# Output layout and the stage-independent plot switches.
+#
+# Everything a run produces lives under <timestamp>_downstream_analysis/, split
+# by topic. Each results folder holds its CSV tables and a plots/ subfolder with
+# the figures describing them:
+#
+#   run_config.txt               z-score thresholds, LFC hit cutoffs, null and
+#                                pathway backgrounds, BLAST and pathway
+#                                thresholds used by the run
+#   results_peptides/            peptide_statistics_<control>_<condition>.csv
+#                                (control/condition are SAMPLE NAMES, e.g.
+#                                 peptide_statistics_mock_pSHDAg.csv)
+#                                plots/  waterfall + peptide heatmap
+#   results_individual_kinases/  kinases_<PTK|STK>_<control>_<condition>.csv
+#                                plots/  kinase overlap venn + its tables
+#   results_kinase_families/     families_<control>_<condition>.csv
+#   results_pathways/            pathways_<source>_<control>_<condition>.csv
+#                                plots/  pathway heatmaps (per comparison + all
+#                                        comparisons in one) + overlap venns
+#   logs/                        limma fallback reports
+#
+# Each null below means "use that default name"; set a path to redirect one
+# folder somewhere else.
+#
+# waterfall_plot and heatmap_plot are the fallbacks for the matching per-stage
+# flags above (waterfall_plot -> peptide_waterfall_plot, heatmap_plot ->
+# peptide_heatmap_plot and pathway_heatmap_plot), so one toggle here turns a
+# whole plot family on or off.
+default_uka_kpea_params:
+  # How much detail the CSV tables carry:
+  #   user      = the short, publication-facing columns (default)
+  #   developer = every column the analysis produces, for debugging
+  # Columns that are an exact copy of another column are dropped in BOTH modes
+  # (see KINASE_DUPLICATE_COLUMNS in src/kx_pipeline_tools.py).
+  output_mode: user
+  peptide_results_output: null
+  kinase_results_output: null
+  family_results_output: null
+  pathway_results_output: null
+  log_output: null
+  waterfall_plot: true
+  heatmap_plot: true
+
+runtime_flags:
+  create_publication_figures: false
+  num_representative_images: 1
+  create_processing_stage_figures: false
+  processing_stage_figures_all_images: false
+  # Optional fraction (0 < f < 1) of images to render instead of all of them.
+  # null or a value >= 1.0 => fall back to processing_stage_figures_all_images.
+  # When set below 1.0 it takes precedence over _all_images and renders the
+  # first ceil(n * f) images of each run (a contiguous prefix, at least 1).
+  # e.g. 0.3333 => roughly the first third of each PTK/STK run.
+  processing_stage_figures_fraction: 0.3
+  processing_stage_figure_image_limit: null

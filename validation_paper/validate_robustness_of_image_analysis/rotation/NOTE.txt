@@ -1,0 +1,16 @@
+Rotation test
+=============
+
+Rotates one frame about its centre over the range in config_rotation.yaml and
+records whether the reference spots and the spot grid are still found.
+
+Run (from the repository root):
+
+    python validation_paper/validate_robustness_of_image_analysis/rotation/rotation_sweep.py
+
+--no-panels gives a terminal-only run, --help lists all options.
+
+Output: one marked figure per angle in output/; the detected range is printed
+to the terminal. The "predicted window" the script prints is based on an
+earlier version of the reference-spot check and does not apply to the current
+code.

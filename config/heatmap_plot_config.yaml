@@ -1,0 +1,178 @@
+cell:
+  height: 0.25
+  width: 0.3
+  fontsize: 9
+  linewidth: 0.5
+  linecolor: "black"
+
+margins:
+  left: 4.5
+  right: 1.5
+  top: 1.0
+  bottom: 2.0
+
+plot:
+  # Diverging map for the SIGNED heatmap (kinase-pathway: Z-score / change),
+  # centred on zero.
+  cmap: "RdBu_r"
+  # Colour ramp of the peptide heatmap, whose colour is log2(S100) -- an absolute
+  # signal, positive throughout, so it runs low -> high with no neutral midpoint
+  # and is NOT centred on zero.
+  #
+  # blue (low) -> red (high).
+  #
+  # Either a matplotlib colormap name or a LIST of colour stops to interpolate
+  # between. 'coolwarm' is the default: its pale middle resolves the 4-7 band that
+  # holds most of the data better than a fully saturated ramp does. If the pale
+  # middle bothers you, a continuously saturated alternative is
+  #   peptide_signal_cmap: ["#2c5fa8", "#8f4fa0", "#c0392b"]   # blue-purple-red
+  peptide_signal_cmap: "coolwarm"
+  dpi: 300
+  image_format: "png"
+  title_pad: 20
+  # How the colour scale (vmin/vmax) of every heatmap is chosen:
+  #   individual = the limits follow the lowest and highest value of THIS plot,
+  #                so each heatmap uses its full colour range (default)
+  #   fixed      = the same limits for every heatmap, taken from fixed_scale
+  #                below, so heatmaps of different conditions/runs are directly
+  #                comparable
+  # For the signed heatmaps zero stays the neutral colour in both modes; the
+  # peptide heatmap is sequential and has no neutral point.
+  color_scale: individual
+
+fixed_scale:
+  # Only read when plot.color_scale is 'fixed'.
+  #
+  # peptide_log2_signal_range: [vmin, vmax] of the peptide heatmap in log2(S100).
+  #   The observed range on PamChip data is roughly 1-12 (S100 of 2 to ~3000), so
+  #   0-12 covers it with a little headroom and keeps PTK and STK panels directly
+  #   comparable.
+  # uka_zscore_abs_max / uka_value_abs_max: kinase-pathway heatmap, depending on
+  #   whether the plotted column is the Z-score or a change/statistic metric.
+  peptide_log2_signal_range:
+    - 0.0
+    - 12.0
+  uka_zscore_abs_max: 3.0
+  uka_value_abs_max: 0.5
+  # benchmarking_value_steps: pyKinaXe-vs-KRSA comparison heatmap -- the first
+  #   step whose value covers the data becomes +/- vmin/vmax; beyond every step
+  #   the limits fall back to +/- max(|value|).
+  benchmarking_value_steps:
+    - 1.0
+    - 2.0
+
+colorbar:
+  label_fontsize: 12
+  width_factor: 2
+  height_rows: 20
+  offset_x: 0.05
+
+axes:
+  label_fontsize: 12
+  title_fontsize: 14
+  x_tick_rotation: 45
+  x_tick_fontsize: 8
+  y_tick_fontsize: 9
+  x_tick_ha: "right"
+
+comparison_heatmap:
+  # Cross-comparison kinase-pathway heatmaps: one figure per pathway source that
+  # shows EVERY control/test comparison of a run on the union of the enriched
+  # pathways and significant kinases, with one shared colorbar. Written next to
+  # the per-comparison heatmaps as
+  # <source>_UKA_heatmap_comparisons_<layout>.png; needs >= 2 comparisons.
+  #
+  # This figure measures its own margins from the labels it actually draws, so
+  # the margins: block above does not apply to it.
+  #
+  # layouts: which figures to draw (a list; [] turns them off)
+  #   panels = one panel per comparison, arranged by panel_direction below
+  #   split  = ONE panel; every cell is divided into one slice per comparison.
+  #            Available, but not drawn by default: add it back to this list
+  #            to get the <source>_UKA_heatmap_comparisons_split.png files.
+  layouts:
+    - panels
+  # split layout only -- direction the cells are sliced in:
+  #   vertical   = side-by-side stripes, left -> right in comparison order
+  #   horizontal = stacked bands, top -> bottom in comparison order
+  split_orientation: vertical
+  # transpose: false = pathways are the rows and kinases the columns (the
+  # per-comparison heatmaps' orientation). true swaps them, so the rows are
+  # kinases and the figure compares kinase against kinase; those files carry a
+  # _kinase_rows suffix and therefore do not overwrite the other orientation.
+  # With the pathway names under the x axis, label_max_chars below is what
+  # keeps the figure from growing a very deep bottom margin.
+  transpose: false
+  # target_width: fit the figure into this width in INCHES, e.g. a journal's
+  # text width (7.0 for a two-column page, 3.5 for one column). The CELLS are
+  # squeezed, never the type: font sizes stay as configured, long row labels
+  # are wrapped, the tick rotation and the position of the colorbar and key
+  # follow from the room that is left, and the figure is saved whole instead of
+  # cropped to its content. null = the figure grows with the number of columns.
+  target_width: 7.0
+  # target_height does the same for the height: the rows are squeezed down to
+  # min_cell_height, which defaults to the line height of the row labels, so
+  # the labels never collide. 9.0 is about the text height of a portrait page.
+  target_height: null
+  # Smallest slice size in inches; a cell grows beyond cell.width / cell.height
+  # so that all comparisons fit (3 comparisons x 0.12 = 0.36 in per cell).
+  # A target size overrides this and squeezes down to the two minima below.
+  slice_min_size: 0.12
+  # How far the columns may be squeezed. auto = until the upright tick labels
+  # would touch, measured on the labels themselves, so a target_width that
+  # cannot be met makes the FIGURE wider rather than the type smaller (the log
+  # says when that happens). A number overrides that floor and lets the labels
+  # collide. min_cell_height: null = the line height of the row labels.
+  min_cell_width: auto
+  min_cell_height: null
+  # Wrapping of the row labels, which set the left margin. Wrapping buys width
+  # at the price of height, because every row grows to the tallest label:
+  #   null        = never wrap (default; a target width then only squeezes the
+  #                 cells, and the figure keeps its height)
+  #   auto        = wrap into about a third of target_width
+  #   <number>    = wrap at that many characters
+  row_label_wrap: null
+  # Shorten labels longer than this to it, with an ellipsis, on both axes. The
+  # pathway names are the long ones: as row labels they can be wrapped instead,
+  # as column labels (transpose: true) they are read along the ticks and this
+  # is the only way to shorten them. null = never shorten.
+  label_max_chars: null
+  # Where the colorbar and the slice key go: right of the plot, underneath it,
+  # or auto = underneath as soon as the right-hand column would not fit into
+  # target_width.
+  legend_position: auto
+  # x tick rotation: auto turns the labels upright as soon as the columns get
+  # too narrow for axes.x_tick_rotation, or give an angle in degrees.
+  tick_rotation: auto
+  # Colour of a cell that the per-comparison heatmap would not have: the kinase
+  # is not significant or the pathway is not enriched in that comparison. White
+  # stays "kinase not in pathway", as in the single heatmaps.
+  absent_color: "0.8"
+  slice_linewidth: 0.3
+  slice_linecolor: "white"
+  # panels layout only: how the panels are arranged and how much space sits
+  # between them, in inches.
+  #   vertical   = stacked downwards (default), sharing one column axis that
+  #                only the last panel labels: fits a 7 in column, at the cost
+  #                of three times the height (3 x 40 pathway rows is about
+  #                34 in; target_height and label_max_chars bring that down)
+  #   horizontal = side by side; every panel repeats the column labels, so
+  #                three panels of pathway names (transpose: true) need
+  #                roughly 17 in of width to stay legible
+  panel_direction: vertical
+  # panels layout: which rows a panel shows. A row that is grey all the way
+  # across says nothing about that comparison -- the pathway is not enriched
+  # in it (or, with transpose: true, the kinase is not significant in it).
+  #   present = drop those rows per panel (default), so a stack of panels
+  #             keeps only the rows that carry a result; the columns stay
+  #             shared, so the panels still line up
+  #   shared  = the full union in every panel, grey where it does not apply
+  panel_rows: present
+  panel_gap: 0.4
+  # Kinase order:
+  #   value    = mean of the plotted metric over the comparisons the kinase is
+  #              significant in, low -> high (the single heatmaps' convention)
+  #   presence = number of comparisons the kinase is significant in, most
+  #              first, then the mean value
+  kinase_order: value
+  key_fontsize: 9

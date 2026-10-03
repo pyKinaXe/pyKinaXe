@@ -1,0 +1,104 @@
+# Configuration for translation/translation_sweep.py
+#
+# LOCAL to this test: not read by the pipeline, does not shadow anything in the
+# repository-level config/ folder, and changes nothing about how pyKinaXe
+# computes results -- only which frame is used and how far it is shifted.
+#
+# Every key has a documented default in the script (DEFAULTS) or in
+# ../robustness_common.py (COMMON_DEFAULTS), so a partial file is valid.
+# ../rotation/config_rotation.yaml is the same file for the other half of the
+# test; keep the shared keys in step so the two runs stay comparable.
+
+translation_sweep:
+  # The folder to take the frame from. Searched recursively for ImageResults
+  # directories, so this may be one run folder, one ImageResults folder, or a
+  # whole experiment tree.
+  source: "data/CDRL_vwr-rats-kinome_data_set"
+
+  # Which frame the sweep runs on. Same two modes as the rotation test, so both
+  # can be pointed at the same frame and compared directly.
+  #   image: <name>     exactly that file
+  #   mode: brightest   one random ARRAY (per seed), then its BRIGHTEST frame
+  #   mode: exposures   the same array and cycle at every configured exposure,
+  #                     one sweep each. WORTH DOING HERE: the one failure that
+  #                     is genuinely the detector's -- the aperture lost on a
+  #                     large shift towards the clipped edge -- only appears at
+  #                     the short exposures. --exposures-mode turns it on for a
+  #                     single run.
+  frames:
+    image: null
+    mode: brightest
+  seed: 0
+
+  # Restrict the pool before choosing; null means "no filter". The exposure
+  # filter defaults to the three the pipeline consumes
+  # (config/image_processor.yaml -> filtering.ptk_filter_exposure_times).
+  cycles: null
+  exposures: [10, 50, 200]
+
+  # ---------------------------------------------------------------------
+  # THE SWEEP
+  # ---------------------------------------------------------------------
+  # Each axis is swept SEPARATELY, the other component held at zero: a
+  # translation has two components and sweeping them together would confound
+  # them. Whole pixels only -- a whole-pixel shift with no rotation is an exact
+  # array copy, and sub-pixel steps would give up the one property that makes
+  # this half of the test clean.
+  #
+  # -160 to +160 overruns the frame in every direction (the room
+  # measured on the rat set is left 78, right 132, up 146, down 18 px), so the
+  # sweep finds the limit rather than being told it. Offsets past it are
+  # reported as NOT TESTABLE and left out of the report; they are not detection
+  # failures.
+  axes: ["x", "y"]
+  from_px: -160
+  to_px: 160
+  step_px: 5
+
+  # ---------------------------------------------------------------------
+  # Output
+  # ---------------------------------------------------------------------
+  output_dir: "output"
+
+  # ONE panel per figure -- the original once, then one per offset -- and no
+  # other file output. They are built at a fixed PRINT width (94.5 mm, so two of
+  # them fit side by side on A4; see robustness_common.py) so panel_dpi decides
+  # how many pixels that width carries: 300 is print quality, below it the
+  # markings soften. About 87 panels plus the legend are roughly 175 MB;
+  # --no-panels reports to the terminal and writes nothing.
+  panels: true
+
+  # The legend is ALWAYS written once as its own figure, legend.png, cropped to
+  # its content: ONE COLUMN of four entries, 41 x 19 mm, meant to stand BESIDE
+  # the panels rather than under them (two panels already fill 189 mm of the
+  # 190 mm text width). This decides only whether the legend is ALSO repeated
+  # under every panel, where it stays in two rows of two. Set it to false for a
+  # page that carries the column once; the panels then lose their legend strip
+  # and get 9.5 mm shorter.
+  panel_legend: true
+
+  panel_dpi: 300
+  dpi: 150
+
+  # Pixels that must stay free at every frame edge around the content box (one
+  # spot pitch). This is what sets the reported admissible range, and here --
+  # unlike in the rotation test -- it is the binding limit: the detection has no
+  # comparable offset-dependent check, so what stops the sweep is the frame.
+  clearance_px: 21.5
+
+  # Kept for a shared code path with the rotation test; a whole-pixel shift with
+  # angle 0 never reaches the interpolator, so this has no effect here.
+  spline_order: 3
+
+  # Radius of the lime spot circles. NOT a drawing choice: this is the aperture
+  # the pipeline integrates over (config/image_processor.yaml ->
+  # spot_intensity.integration_radius), so a circle that misses its spot in the
+  # picture is a wrong number in the export.
+  integration_radius: 5.0
+
+  # How the content box -- peptide grid AND reference spots -- is measured. The
+  # yardstick every step is checked against, not the detector under test.
+  content_box:
+    smooth_sigma: 5.0
+    spot_rel_threshold: 0.15
+    spot_min_area: 12

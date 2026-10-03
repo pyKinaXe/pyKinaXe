@@ -1,0 +1,11 @@
+Scope,Array,Comparison,Unit,n_KRSA,n_pyKinaXe,n_overlap,n_KRSA_only,n_pyKinaXe_only,n_union,Jaccard
+array,PTK,mock_vs_pLHDAg,families,2,1,1,1,0,2,0.5
+array,STK,mock_vs_pLHDAg,families,12,10,9,3,1,13,0.692
+comparison,PTK+STK,mock_vs_pLHDAg,"(array,family) instances",14,11,10,4,1,15,0.667
+array,PTK,mock_vs_pSHDAg,families,2,1,1,1,0,2,0.5
+array,STK,mock_vs_pSHDAg,families,2,1,1,1,0,2,0.5
+comparison,PTK+STK,mock_vs_pSHDAg,"(array,family) instances",4,2,2,2,0,4,0.5
+array,PTK,mock_vs_pSVLD3,families,0,0,0,0,0,0,0.0
+array,STK,mock_vs_pSVLD3,families,12,12,11,1,1,13,0.846
+comparison,PTK+STK,mock_vs_pSVLD3,"(array,family) instances",12,12,11,1,1,13,0.846
+all,PTK+STK,ALL_comparisons,"(array,comparison,family) instances",30,25,23,7,2,32,0.719

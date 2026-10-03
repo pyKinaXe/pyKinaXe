@@ -1,0 +1,4 @@
+dataset,array,stage,scope,krsa_calls,wall_seconds,cpu_seconds
+benchmarking,PTK,KRSA (BioNavigator input),across,9,23.045,23.031
+benchmarking,STK,KRSA (BioNavigator input),across,9,30.188,30.205
+benchmarking,ALL,KRSA (dataset),across,18,53.237,53.236

@@ -1,0 +1,62 @@
+pamgeneAnalyzeR + KRSA, end to end on raw TIFFs -- run manifest
+===============================================================
+written           : 2026-09-13 16:20:55
+script            : validation_paper/run_pamanalyzeR_and_KRSA/run_pamanalyzeR_and_KRSA.R
+dataset           : benchmarking
+input folder      : data/benchmarking_data_set
+output folder     : output_unmodified/benchmarking
+
+pamgeneAnalyzeR   : 0.1.0  (https://github.com/amelbek/pamgeneAnalyzeR)
+KRSA              : 1.99.354  (https://github.com/CogDisResLab/KRSA)
+R                 : R version 4.5.2 (2025-10-31)
+platform          : aarch64-apple-darwin24.4.0
+registration cores: 9 (registerAllImages()'s own default, detectCores() - 1)
+
+TIMING (wall clock is the number to quote; CPU excludes parallel workers)
+  stage 1  pamgeneAnalyzeR :   127.7s (2:08) wall  /     0.6s cpu
+  stage 2  KRSA            :     0.0s wall  /     0.0s cpu
+  TOTAL                    :   127.8s (2:08) wall
+
+settings (identical to run_krsa_on_pykinaxe_image_analysis.R, so the two
+runs are comparable -- do not change one side only):
+  spot radius      : 5 px
+  arrays           : STK
+  layout           : AS READ, not transposed (--unmodified)
+  reference image  : first file in the folder (vignette's choice)
+  grid mode        : published
+  signal scale     : 65535  ([0,1] float -> counts)
+  saturation filter: OFF (pamgeneAnalyzeR produces no saturation measure)
+  signal_threshold : 5
+  r2_threshold     : 0.9
+  lfc_cutoffs      : 0.2, 0.3, 0.4
+  z_hit_threshold  : 2
+  iterations       : 2000
+  seed             : 123
+  control regex    : ^mock$
+
+known pamgeneAnalyzeR issues worked around (see the script header):
+  [1] find_centers() returns Row/Col transposed vs the PamChip Array
+      Layout; the layout is transposed before merging (r 0.43 -> 0.9997)
+  [2] find_centers() (12x12) and substractBackground() (160 columns) are
+      STK-only; every other function is grid-agnostic. PTK gets its grid
+      from the extension, but registration/extraction stay the package's
+  [3] find_centers()'s class() guard errors on R >= 4.0; shimmed
+
+  >> UNMODIFIED pamgeneAnalyzeR RUN, exactly as its own vignette runs it:
+     STK only, layout as read, reference image = first file in the folder.
+     This is an IMAGE-ANALYSIS TIMING ONLY. The peptide labels it produces
+     are wrong (FINDING 1), and KRSA was not run on them. The KRSA timing
+     comes from run_krsa_on_bionavigator.R, on KRSA's own native input.
+
+[STK]
+  folder          : 710483213_710483216-on 1300STKlysv10-run 240821110734
+  images          : 208
+  reference image : 710483213_W1_F1_T100_P124_I172_A30.tif
+  spot grid       : pamgeneAnalyzeR::find_centers() (published, 12x12)
+  spots addressed : 144
+  Z'-factor       : median Z'-factor -0.011 (range -0.546 .. 0.487)
+  mapping table   : NA
+  coverage table  : NA
+  peptides passing global QC: NA of NA
+  stage 1 / stage 2:   127.7s (2:08) /      n/a wall
+

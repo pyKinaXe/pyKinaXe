@@ -1,0 +1,35 @@
+pamgeneAnalyzeR + KRSA on raw PamChip TIFFs -- runtime
+=====================================================
+written : 2026-09-13 13:59:49
+machine : aarch64-apple-darwin24.4.0, R 4.5.2, 9 registration core(s)
+packages: pamgeneAnalyzeR 0.1.0, KRSA 1.99.354
+
+Wall clock is what you waited for. Stage 1 is parallel over the cores
+above; stage 2 (krsa() sampling) is single-threaded. The CPU column is
+this R process only and so understates stage 1 whenever cores > 1.
+
+dataset                  array  stage                            wall (s)      cpu (s)   images
+----------------------------------------------------------------------------------------------
+CDRL_vwr-rats-kinome     PTK    pamgeneAnalyzeR                     510.5          2.0      528
+CDRL_vwr-rats-kinome     PTK    KRSA                                128.3        127.9        -
+CDRL_vwr-rats-kinome     STK    pamgeneAnalyzeR                     251.7          1.0      286
+CDRL_vwr-rats-kinome     STK    KRSA                                147.0        147.0        -
+----------------------------------------------------------------------------------------------
+CDRL_vwr-rats-kinome     ALL    pamgeneAnalyzeR (dataset)           762.2          3.0      814
+CDRL_vwr-rats-kinome     ALL    KRSA (dataset)                      275.3        274.8        -
+CDRL_vwr-rats-kinome     ALL    TOTAL (dataset)                    1037.7        277.8      814
+benchmarking             PTK    pamgeneAnalyzeR                     391.7          1.7      352
+benchmarking             PTK    KRSA                                 88.6         87.0        -
+benchmarking             STK    pamgeneAnalyzeR                     184.6          0.6      208
+benchmarking             STK    KRSA                                 99.1         99.0        -
+----------------------------------------------------------------------------------------------
+benchmarking             ALL    pamgeneAnalyzeR (dataset)           576.4          2.3      560
+benchmarking             ALL    KRSA (dataset)                      187.7        186.0        -
+benchmarking             ALL    TOTAL (dataset)                     764.1        188.3      560
+
+PER-DATASET TOTALS
+----------------------------------------------------------------------------------------------
+  CDRL_vwr-rats-kinome    stage 1   762.2s (12:42)   stage 2   275.3s (4:35)   TOTAL  1037.7s (17:18)   (814 images)
+  benchmarking            stage 1   576.4s (9:36)   stage 2   187.7s (3:08)   TOTAL   764.1s (12:44)   (560 images)
+  ALL DATASETS             1801.8s (30:02)
+

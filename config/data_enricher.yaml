@@ -1,0 +1,132 @@
+data_enricher:
+  columns:
+    pamchip_location: PamChip Location
+    barcode: Barcode
+    row: Row
+    array: Array
+    article_number: Article number
+    strip: Strip
+    sample_name: Sample name
+    technical_replicate: Technical replicate
+    biological_replicate: Biological replicate
+    assay_volume: Assay volume
+    test_condition: _test_condition
+    condition_role: _condition_role
+  annotation_always_display:
+    - PamChip Location
+    - Barcode
+    - Row
+    - Sample name
+  annotation_conditional_display:
+    - Technical replicate
+    - Biological replicate
+  annotation_exclude_columns:
+    - Assay volume
+  roman_values:
+    I: 1
+    V: 5
+    X: 10
+    L: 50
+    C: 100
+    D: 500
+    M: 1000
+  enrichment_filename_suffix: _data_enrichment
+
+uniprot_blast_api_data_collector:
+  input_path: data/external/PamGene/enrichment_peptides.csv
+  output_path: data/external/BLAST/blast_results_uniprot.csv
+  email: your@email.com
+  base_url: https://www.ebi.ac.uk/Tools/services/rest/ncbiblast
+
+omnipath_ptm_extractor:
+  curated_source_labels:
+    - PhosphoSitePlus
+    - SIGNOR
+    - HPRD
+    - PhosphoELM
+  evidence_rank:
+    predicted_or_inferred: 0
+    literature_supported: 1
+    curated_source: 2
+    curated_literature: 3
+  omnipath_enzsub_url: https://omnipathdb.org/enzsub
+  iptmnet_api_url: https://research.bioinformatics.udel.edu/iptmnet/api/v1
+  uniprot_kinase_url: https://rest.uniprot.org/uniprotkb/stream?format=tsv&query=%28%28taxonomy_id%3A9606%29%20AND%20%28reviewed%3Atrue%29%20AND%20%28%28keyword%3AKW-0723%29%20OR%20%28keyword%3AKW-0829%29%29%29&fields=accession,gene_primary
+  # Reviewed human Ser/Thr (KW-0723) and Tyr (KW-0829) protein kinases with all
+  # their gene names. Used to resolve the kinases named in UniProt
+  # modified-residue notes to accessions.
+  default_uniprot_stk_path: data/external/PTM/UniProt/STK_uniprotkb_taxonomy_id_9606_AND_keyword_2026_03_30.tsv
+  default_uniprot_ptk_path: data/external/PTM/UniProt/PTK_uniprotkb_taxonomy_id_9606_AND_keyword_2026_03_30.tsv
+  # UniProt 'Modified residue' annotations of reviewed human entries. A note
+  # that names the kinase ("Phosphothreonine; by IKKE, PDPK1 and TBK1") is
+  # UniProt's site-specific kinase-substrate information; it replaces the
+  # 'Interacts with' column, which lists binding partners (IntAct binary
+  # interactions), not substrates. Saved from the REST API with the release in
+  # the file name; `python src/kx_data_enricher.py uniprot-modres --download`
+  # fetches the current release.
+  default_uniprot_modres_path: data/external/PTM/UniProt/uniprot_modres_human_2026_03.tsv
+  # Primary gene names of all reviewed human entries (same release). A kinase
+  # synonym that is the official symbol of another protein is ambiguous and is
+  # not used (PDK1 is pyruvate dehydrogenase kinase 1, also a PDPK1 synonym).
+  default_uniprot_gene_symbols_path: data/external/PTM/UniProt/uniprot_gene_symbols_human_2026_03.tsv
+  uniprot_stream_url: https://rest.uniprot.org/uniprotkb/stream
+  uniprot_modres_query: (organism_id:9606) AND (reviewed:true) AND (ft_mod_res:phospho*)
+  uniprot_gene_symbols_query: (organism_id:9606) AND (reviewed:true)
+  # Kinase names in modified-residue notes that denote a family or group rather
+  # than one kinase (upper case, spaces removed). They are never assigned to a
+  # single member, and they are checked before synonyms because UniProt lists
+  # e.g. AMPK as a synonym of PRKAA2 and CAMK2 as one of CAMK2B.
+  uniprot_kinase_group_names:
+    - PKA
+    - PKG
+    - PKC
+    - CK1
+    - CK2
+    - AMPK
+    - GSK3
+    - CAMK1
+    - CAMK2
+    - ERK1/2
+    - JNK
+    - P38
+    - AKT
+    - PKB
+    - PDGFR
+    - RAF
+    - PKD
+    - BARK
+    - MAPK
+    - MAP3K
+    - JAK
+    - PAK
+    - PHK
+    - MLCK
+    - CDC42BP
+    - CDK11
+    - TYR-KINASES
+    - SRC-TYPETYR-KINASES
+  manual_interactions_filename: manual_interactions.csv
+  output_dir: data/external/processed/PTM_Data_OmniPath
+  organism: 9606
+  timeout: 120
+  iptmnet_batch_size: 1000
+  uniprot_accessions_url: https://rest.uniprot.org/uniprotkb/accessions
+  enzyme_annotation_batch_size: 200
+  # Drop enzymes whose catalytic class is opposite to the array type
+  # (PTK drops ser_thr, STK drops tyr; dual/unknown kept). CLI: --filter-enzyme-class.
+  filter_enzyme_class: true
+  # Allow overwriting existing ptk/stk_interactions.csv. CLI: --overwrite.
+  overwrite: true
+
+kinase_liver_extractor:
+  output_path: data/external/UniProt/kinases_in_liver.csv
+  api_format: tsv
+  api_taxonomy_id: '9606'
+  api_keyword: KW-0418
+  api_fields: gene_primary,accession
+  url: https://rest.uniprot.org/uniprotkb/search
+  params:
+    query: (organism_id:9606) AND (keyword:KW-0418) AND (cc_tissue_specificity:liver)
+    format: tsv
+    fields: accession,gene_names,protein_name,cc_tissue_specificity
+    size: 500

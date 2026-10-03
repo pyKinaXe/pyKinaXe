@@ -1,0 +1,57 @@
+data_loader:
+  filename_pattern: '^(\d+)_W(\d+)_F(\d+)_T(\d+)_P(\d+)_I(\d+)_A(\d+)\.tif$'
+  coordinate_names:
+    - PamChip_barcode
+    - Array
+    - FoV
+    - Exposure_time
+    - Pump_cycle
+    - Image_number
+    - Temperature
+  image_results_dirname: ImageResults
+  sample_annotation_pattern: '*Sample Annotation*.txt'
+  folder_datetime_pattern: ' \d{12}$'
+  folder_run_keyword: RUN
+  valid_peptide_types: [PTK, STK]
+  timestamp_format: '%Y%m%d%H%M%S'
+  progress_interval: 100
+  candidate_data_paths:
+    - ./data
+    - ../data
+    - ../../data
+    - ~/data
+  annotation_always_display:
+    - PamChip Location
+    - Barcode
+    - Row
+    - Array
+    - Article number
+    - Strip
+    - Sample name
+  annotation_conditional_display:
+    - Technical replicate
+    - Biological replicate
+  annotation_exclude_columns:
+    - Assay volume
+
+array_layout_loader:
+  candidate_data_paths:
+    - ./data
+    - ../data
+    - ../../data
+    - ~/data
+  fallback_data_dir: ../data
+  encodings_to_try:
+    - utf-8
+    - latin-1
+    - windows-1252
+    - iso-8859-1
+  chip_grid_dimensions:
+    PTK: [14, 14]
+    STK: [12, 12]
+  numeric_float_fields:
+    - Xoff
+    - Yoff
+    - SpotConc
+    - SpotConcentration (µM)
+  default_output_dir: results

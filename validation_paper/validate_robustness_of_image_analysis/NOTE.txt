@@ -1,0 +1,18 @@
+Robustness of the image analysis against rotation and translation
+==================================================================
+
+Rotates or shifts one frame of the rat dataset step by step and records
+whether pyKinaXe still finds the reference spots and the spot grid.
+
+Run (from the repository root):
+
+    python validation_paper/validate_robustness_of_image_analysis/rotation/rotation_sweep.py
+    python validation_paper/validate_robustness_of_image_analysis/translation/translation_sweep.py
+
+--no-panels gives a terminal-only run, --help lists all options. Range, frame
+and data source are set in rotation/config_rotation.yaml and
+translation/config_translation.yaml.
+
+Output: one marked figure per step in rotation/output/ and
+translation/output/ (excluded from git); the results are printed to the
+terminal. A panel without markings is a failed detection.

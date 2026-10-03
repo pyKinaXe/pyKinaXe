@@ -1,0 +1,43 @@
+KRSA on pyKinaXe image analysis -- run manifest
+==============================================
+written           : 2026-09-25 18:24:12
+script            : validation_paper/compare_pyKinaXe_results_with_KRSA/results_KRSA/run_KRSA_on_pykinaxe_image_analysis/run_krsa_on_pykinaxe_image_analysis.R
+dataset           : CDRL_vwr-rats-kinome
+input folder      : validation_paper/compare_pyKinaXe_results_with_KRSA/results_KRSA/run_KRSA_on_pykinaxe_image_analysis/exports_pykinaxe/exports_image_analysis_pykinaxe_CDRL_vwr-rats-kinome_data_set
+output folder     : validation_paper/compare_pyKinaXe_results_with_KRSA/results_KRSA/results_CDRL_vwr-rats-kinome_data_set
+
+KRSA version      : 1.99.354  (https://github.com/CogDisResLab/KRSA)
+R version         : R version 4.5.2 (2025-10-31)
+
+thresholds and settings (change one side only at your peril -- the family
+comparison assumes pyKinaXe used the same):
+  signal_threshold: 5
+  r2_threshold    : 0.9
+  lfc_cutoffs     : 0.2, 0.3, 0.4
+  z_hit_threshold : 2
+  iterations      : 2000
+  seed            : 123
+  figures         : yes
+
+[PTK]
+  spot export     : 20260925154717_Export_image_analysis_PTK_bn.csv
+  sample annotation: 20260925154717_data_enrichment.txt
+  mapping table   : KRSA_Mapping_PTK_PamChip_86402_v1
+  coverage table  : KRSA_coverage_PTK_PamChip_86402_v1
+  peptides passing global QC: 121 of 195
+  HPC_Exer_vs_HPC_CTL          QC peptides 126  hit peptides 62   kinase hits 0    ok
+  STR_Exer_vs_HPC_CTL          QC peptides 128  hit peptides 125  kinase hits 0    ok
+  HPC_Exer_vs_STR_CTL          QC peptides 122  hit peptides 120  kinase hits 0    ok
+  STR_Exer_vs_STR_CTL          QC peptides 138  hit peptides 42   kinase hits 0    ok
+
+[STK]
+  spot export     : 20260925154717_Export_image_analysis_STK_bn.csv
+  sample annotation: 20260925154717_data_enrichment.txt
+  mapping table   : KRSA_Mapping_STK_PamChip_87102_v1
+  coverage table  : KRSA_coverage_STK_PamChip_87102_v2
+  peptides passing global QC: 69 of 144
+  HPC_Exer_vs_HPC_CTL          QC peptides 73   hit peptides 29   kinase hits 1    (ULK)
+  STR_Exer_vs_HPC_CTL          QC peptides 74   hit peptides 43   kinase hits 1    (AKT)
+  HPC_Exer_vs_STR_CTL          QC peptides 73   hit peptides 45   kinase hits 3    (NAK, PAKB, AKT)
+  STR_Exer_vs_STR_CTL          QC peptides 77   hit peptides 45   kinase hits 5    (PKA, RSK, PKD, NAK, DMPK)
+
